@@ -1,4 +1,4 @@
-# Penetration Test Bericht: Metasploitable 2
+# Kompetenz: A1A · Bloom: Beurteilen · Dauer: ~180 Min. · Sozialform: Einzelauftrag
 
 ## 1. Netzwerkeinstellungen prüfen & IP-Adressen ermitteln
 
