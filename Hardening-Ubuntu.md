@@ -14,9 +14,6 @@ Ausgangspunkt zu erhalten.
 
 ![Installationsauswahl](Bilder/Hardening-Ubuntu/01-installation-ausgangslage.png)
 
-
-
-markdown
 ### Systeminfo
 
 ```
@@ -27,8 +24,12 @@ Kernel: Linux 6.7.0-31-generic
 Virtualization: vmware
 ```
 
+Nach der Installation wurde der SSH-Server nachträglich installiert und
+aktiviert, da die Desktop-Variante von Ubuntu ihn nicht standardmässig
+mitbringt:
 
 ```
+$ sudo apt install -y openssh-server
 $ sudo systemctl enable --now ssh
 $ systemctl status ssh
 ● ssh.service - OpenBSD Secure Shell server
@@ -37,8 +38,6 @@ $ systemctl status ssh
 Sep 15 11:51:47 hardening-lab sshd[5690]: Server listening on 0.0.0.0 port 22.
 Sep 15 11:51:47 hardening-lab sshd[5690]: Server listening on :: port 22.
 ```
-
-
 
 ## 2. IST-Zustand vor der Härtung
 
@@ -98,7 +97,7 @@ Einziges Mitglied der sudo-Gruppe ist der angelegte Benutzer `r`.
 5. IPv6 ist aktiv und exponiert dieselben Dienste wie IPv4 (SSH, Avahi),
    wird aber im NAT-Netz der VM nicht benötigt.
 
-   ### 2.5 Lynis-Sicherheitsaudit (Baseline)
+### 2.5 Lynis-Sicherheitsaudit (Baseline)
 
 ```
 $ sudo lynis audit system
