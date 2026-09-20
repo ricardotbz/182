@@ -285,15 +285,32 @@ Untersucht habe ich die Bereiche ENDPOINT SECURITY und THREAT INTELLIGENCE.
 | Threat Hunting | Durchsuchbare Roh-Events aller Agenten mit Filtermöglichkeit |
 
 ![Inventory](Bilder/Monitoring-Wazuh/05-inventory.png)
-![Configuration Assessment](Bilder/Monitoring-Wazuh/07-sca.png)
+![Configuration Assessment](Bilder/Monitoring-Wazuh/06-sca.png)
+
+### Ergebnis des Configuration Assessment
+
+Der Scan lief am 20.09.2026 um 12:53:57 gegen die Policy **CIS Ubuntu Linux 24.04 LTS Benchmark v1.0.0**:
+
+| Kennzahl | Wert |
+|---|---|
+| Passed | 101 |
+| Failed | 144 |
+| Not applicable | 34 |
+| Score | 41 % |
+
+Der Score von 41 % auf einem frisch installierten System wirkt auf den ersten Blick alarmierend, ist aber erklärbar. Die CIS-Benchmarks sind für gehärtete Serversysteme geschrieben, während hier ein Ubuntu Desktop geprüft wurde. Ein Teil der Befunde betrifft deshalb Vorgaben, die für den vorgesehenen Einsatzzweck gar nicht sinnvoll umsetzbar sind – etwa die Entfernung der grafischen Oberfläche. Die 34 als *Not applicable* eingestuften Checks zeigen zudem, dass Wazuh selbst bereits erkennt, wenn ein Prüfpunkt auf dem System keine Grundlage hat, weil die betreffende Komponente nicht installiert ist.
+
+Für die Praxis heisst das: Ein Score von 100 % ist kein sinnvolles Ziel. Entscheidend ist, dass jeder der 144 Befunde einmal bewertet wird – entweder umgesetzt oder begründet als irrelevant eingestuft. Ein unbewerteter Befund ist das eigentliche Risiko, weil niemand weiss, ob dahinter eine echte Lücke steckt.
+
+Unter dem Reiter *Events* sind die einzelnen Prüfungen als durchsuchbare Ereignisse abgelegt, jeweils mit Titel, geprüfter Datei und Resultat. Das ist die Grundlage, auf der eine Härtung anschliessend aufsetzen würde.
 
 ### Beobachtungen
 
-**Wazuh überwacht sich selbst.** Noch bevor ein Agent registriert war, zeigte das Dashboard bereits 75 Alarme der letzten 24 Stunden (5 mit mittlerem, 70 mit tiefem Schweregrad). Sie stammen vom Wazuh-Server selbst – unter anderem meine SSH-Anmeldungen und die Neustarts der Dienste während der Fehlersuche. Das war die erste praktische Bestätigung, dass die Ereigniskette tatsächlich funktioniert.
+**Wazuh überwacht sich selbst.** Noch bevor ein Agent registriert war, zeigte das Dashboard bereits 75 Alarme der letzten 24 Stunden. Sie stammen vom Wazuh-Server selbst – unter anderem meine SSH-Anmeldungen und die Neustarts der Dienste während der Fehlersuche. Das war die erste praktische Bestätigung, dass die Ereigniskette funktioniert.
+
+**Die Datenmenge steigt mit jedem Agenten deutlich.** Nach der Registrierung des Endpunkts wuchs die Zahl innerhalb kurzer Zeit auf 150 Alarme mittlerer und 214 tiefer Stufe, allein durch den ersten SCA-Scan und die Inventarerfassung. Hochgerechnet auf mehrere hundert Endpunkte wird klar, dass die Festlegung einer sinnvollen Alarmschwelle keine Nebensächlichkeit ist, sondern darüber entscheidet, ob das System im Alltag brauchbar bleibt oder in einer Alarmflut untergeht.
 
 **Die Detailtiefe des Inventars.** Wazuh kennt nach wenigen Minuten jedes installierte Paket, jeden offenen Port und jeden laufenden Prozess des Endpunkts. Das ist für die Sicherheit äusserst nützlich, macht aber zugleich deutlich, welche Verantwortung damit einhergeht: Wer Zugriff auf das Dashboard hat, sieht sehr genau, was auf den überwachten Geräten geschieht. In einem Unternehmen wäre zu regeln, wer diesen Zugriff erhält, und bei Mitarbeitergeräten wären Mitwirkungsrechte der Belegschaft zu berücksichtigen.
-
-**Die Datenmenge.** Bereits ein einzelner Agent erzeugt im Leerlauf laufend Events. Hochgerechnet auf mehrere hundert Endpunkte wird klar, dass die Festlegung einer sinnvollen Alarmschwelle keine Nebensächlichkeit ist, sondern darüber entscheidet, ob das System im Alltag brauchbar bleibt oder in einer Alarmflut untergeht.
 
 ---
 
@@ -419,7 +436,7 @@ Beim ersten Aufruf erschien noch die Meldung `Wazuh dashboard server is not read
 
 ### Was Wazuh in diesem Aufbau geleistet hat
 
-Am meisten beeindruckt hat mich, wie schnell aus einem unbeobachteten System ein transparentes wird. Innerhalb von 15 Sekunden nach dem Start des Agenten lagen ein vollständiges Systeminventar, ein erster Integritätsscan und eine komplette Prüfung gegen die CIS-Benchmarks vor. Diese Transparenz ist für mich der eigentliche Wert des Werkzeugs: Nicht die Alarme sind das Entscheidende, sondern dass man überhaupt erst weiss, in welchem Zustand die eigenen Systeme sind. Vor diesem Auftrag hätte ich nicht sagen können, welche Pakete auf einem frisch installierten Ubuntu mit bekannten Schwachstellen laufen.
+Am meisten beeindruckt hat mich, wie schnell aus einem unbeobachteten System ein transparentes wird. Innerhalb von 15 Sekunden nach dem Start des Agenten lagen ein vollständiges Systeminventar, ein erster Integritätsscan und eine komplette Prüfung gegen die CIS-Benchmarks mit 279 ausgewerteten Checks vor. Diese Transparenz ist für mich der eigentliche Wert des Werkzeugs: Nicht die Alarme sind das Entscheidende, sondern dass man überhaupt erst weiss, in welchem Zustand die eigenen Systeme sind. Vor diesem Auftrag hätte ich nicht gedacht, dass ein frisch installiertes Ubuntu 144 Abweichungen von einem anerkannten Härtungsstandard aufweist.
 
 Überzeugend finde ich auch, dass mehrere Fragestellungen in einem Werkzeug zusammenlaufen. Logauswertung, Integritätsprüfung, Schwachstellen- und Konfigurationsmanagement wären sonst vier getrennte Systeme mit vier Oberflächen.
 
