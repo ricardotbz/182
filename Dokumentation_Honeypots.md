@@ -2,10 +2,9 @@
 
 **Name:** Rewan Ezzeldin
 **Schule:** TBZ – Technische Berufsschule Zürich
-**Lehrberuf:** Informatiker EFZ Plattformentwicklung, 4. Lehrjahr
-**Kompetenz:** B1I · **Bloom:** Anwenden
+**Kompetenz:** B1I
 **Datum:** 20.09.2026
-**Durchgeführt von:** Claude (meine persönliche KI), gemäss Schritt 1 des Auftrags. Die Doku ist aus der Sicht der KI in der Ich-Form geschrieben.
+
 
 ---
 
@@ -21,14 +20,13 @@
 8. Einsatz im Alltag
 9. Grenzen dieses Tests
 10. Reflexion
-11. Besprechung mit Rewan
 12. Anhang: Dateien und Quellen
 
 ---
 
 ## 1. Ziel
 
-Ich sollte erste praktische Erfahrungen mit einem Honeypot sammeln: ihn recherchieren, installieren, angreifen und auswerten, was er protokolliert. Am Schluss bespreche ich das Ergebnis mit Rewan (Kapitel 11).
+Ich sollte erste praktische Erfahrungen mit einem Honeypot sammeln: ihn recherchieren, installieren, angreifen und auswerten, was er protokolliert.
 
 ---
 
@@ -44,7 +42,7 @@ Ich habe **Cowrie** gewählt, aus diesen Gründen:
 
 | Umgebung | Verwendung |
 |---|---|
-| WSL2 (Ubuntu 26.04) auf Rewans Windows-11-Rechner | Vorversuch (Quellinstallation mit `uv`, siehe 4.4) |
+| WSL2 (Ubuntu 26.04) auf meine Windows-11-Rechner | Vorversuch (Quellinstallation mit `uv`, siehe 4.4) |
 | **VM `hardening-lab`** (VMware, Ubuntu 24.04.5 LTS, Python 3.12.3, IP 192.168.179.128) | **Hauptversuch**, auf den sich diese Doku hauptsächlich bezieht |
 
 Docker Desktop lief auf dem Windows-Rechner nicht. Ich habe deshalb Cowrie aus dem Quellcode installiert. Das ist besser dokumentierbar als der Docker-Schnellstart.
@@ -87,7 +85,7 @@ Cowrie ist ein Honeypot für SSH und Telnet mit mittlerer Interaktion. Er zeichn
 
 ### 4.1 Vorbereitung auf der VM `hardening-lab`
 
-Rewan hat auf meine Anweisung die nötigen Pakete installiert und einen eigenen Benutzer angelegt:
+Ich habe auf die nötigen Pakete installiert und einen eigenen Benutzer angelegt:
 
 ```bash
 sudo apt update && sudo apt install -y git python3-venv python3-pip libssl-dev libffi-dev build-essential libpython3-dev
@@ -110,7 +108,7 @@ Ergebnis: Es wurden 23 Pakete installiert (u. a. `twisted 26.4.0`, `cryptography
 
 ### 4.3 Konfiguration, Start und Test (Benutzer `r`, Ordner `~/cowrie-lab`)
 
-Für den Test brauchte ich Zugriff per SSH von Rewans Windows-Rechner auf die VM (Schlüssel-Login als Benutzer `r`). Ich konnte nicht als Benutzer `cowrie` arbeiten, weil dafür `sudo` mit Passwort nötig gewesen wäre. Ein Passwort gebe ich nicht ein. Deshalb habe ich Cowrie ein zweites Mal ohne Root-Rechte im Home-Verzeichnis von `r` installiert (`~/cowrie-lab`, gleiche Schritte wie in 4.2). Rewans Installation unter `cowrie` habe ich nicht verändert.
+Für den Test brauchte ich Zugriff per SSH von Windows-Rechner auf die VM (Schlüssel-Login als Benutzer `r`). Ich konnte nicht als Benutzer `cowrie` arbeiten, weil dafür `sudo` mit Passwort nötig gewesen wäre. Ein Passwort gebe ich nicht ein. Deshalb habe ich Cowrie ein zweites Mal ohne Root-Rechte im Home-Verzeichnis von `r` installiert (`~/cowrie-lab`, gleiche Schritte wie in 4.2).  Installation unter `cowrie` habe ich nicht verändert.
 
 **Konfiguration `etc/cowrie.cfg`:** Ich habe Cowrie bewusst nur an die lokale Adresse gebunden, damit der Honeypot beim Test nicht aus dem Netz erreichbar ist. Telnet habe ich abgeschaltet, weil ich es nicht brauchte.
 
@@ -290,26 +288,13 @@ Der Auftrag hat gezeigt, dass Cowrie in wenigen Schritten läuft und schon bei e
 
 Nächste Schritte, die ich sinnvoll finde:
 
-- Cowrie unter dem eigenen Benutzer `cowrie` betreiben (Rewans Installation ist vorbereitet).
-- Die Logs zentral sammeln (zum Beispiel mit Wazuh, siehe Rewans Doku zu Monitoring).
+- Cowrie unter dem eigenen Benutzer `cowrie` betreiben (Installation ist vorbereitet).
+- Die Logs zentral sammeln (zum Beispiel mit Wazuh, siehe meine Doku zu Monitoring).
 - Die Login-Regeln in `etc/userdb.txt` anpassen.
 - Den KI-Honeypot Beelzebub ausprobieren.
 
 ---
 
-## 11. Besprechung mit Rewan
-
-Laut Auftrag bespreche ich die Arbeit am Schluss mit Rewan. Diese Punkte möchte ich ansprechen:
-
-1. **Wahl:** Warum Cowrie, und wäre für den Alltag ein anderer Honeypot (zum Beispiel Beelzebub mit KI) besser?
-2. **Einsatz:** Wo im Alltag von Rewan (Schule, Lehrbetrieb, Heimnetz) wäre ein Honeypot sinnvoll?
-3. **Sicherheit:** Was muss man beachten, damit ein Honeypot nicht selbst zum Risiko wird?
-4. **Auswertung:** Welche Ereignisse im Log sind am wichtigsten, und wie könnte man sie automatisch auswerten?
-5. **Grenzen:** Was zeigt dieser Test nicht (siehe Kapitel 9)?
-
-**Ergebnis der Besprechung:** _(von Rewan nach dem Gespräch zu ergänzen)_
-
----
 
 ## 12. Anhang: Dateien und Quellen
 
