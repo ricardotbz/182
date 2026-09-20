@@ -2,7 +2,7 @@
 
 **Auftrag:** Monitoring der Endpunkte mit wazuh
 **Kompetenzband:** D – HIDS in Betrieb nehmen
-**Bearbeitete Stufe:** B (D1B) – «ein HIDS in Betrieb nehmen»
+**Bearbeitete Stufe:** B (D1B) mit Härtung des überwachten Systems
 **Verfasser:** Rewan Ezzeldin
 **Datum:** 20. September 2026
 
@@ -14,9 +14,10 @@
 2. [Installation der zentralen Komponenten](#2-installation-der-zentralen-komponenten)
 3. [Installation des Agenten](#3-installation-des-agenten)
 4. [Auswertung des Dashboards](#4-auswertung-des-dashboards)
-5. [Aufgetretene Probleme und Lösungen](#5-aufgetretene-probleme-und-lösungen)
-6. [Fazit](#6-fazit)
-7. [Anhang](#7-anhang)
+5. [Härtung des Systems](#5-härtung-des-systems)
+6. [Aufgetretene Probleme und Lösungen](#6-aufgetretene-probleme-und-lösungen)
+7. [Fazit](#7-fazit)
+8. [Anhang](#8-anhang)
 
 ---
 
@@ -119,7 +120,7 @@ wazuh-indexer.service   Active: failed (Result: timeout)
 wazuh-dashboard.service Active: inactive (dead)
 ```
 
-Die Ursachenanalyse und die Behebung sind in Kapitel 5 dokumentiert. Nach den dort beschriebenen Anpassungen und einem Neustart der VM liefen alle drei Dienste:
+Die Ursachenanalyse und die Behebung sind in Kapitel 6 dokumentiert. Nach den dort beschriebenen Anpassungen und einem Neustart der VM liefen alle drei Dienste:
 
 ```bash
 sudo systemctl status wazuh-indexer wazuh-manager wazuh-dashboard --no-pager | grep Active
@@ -314,11 +315,119 @@ Unter dem Reiter *Events* sind die einzelnen Prüfungen als durchsuchbare Ereign
 
 ---
 
-## 5. Aufgetretene Probleme und Lösungen
+## 5. Härtung des Systems
+
+Auf Basis der 144 Failed Checks aus dem Configuration Assessment habe ich sechs Massnahmen umgesetzt. Vor den Änderungen wurde ein Snapshot der VM erstellt, um jeden Eingriff zurücknehmen zu können.
+
+### 5.1 Auswahl und Bewertung der Befunde
+
+Nicht jede Empfehlung des CIS-Benchmarks ist auf diesem System sinnvoll. Für jeden bearbeiteten Befund habe ich deshalb zuerst entschieden, ob er in dieser Situation überhaupt relevant ist.
+
+| Nr. | Befund | Entscheid | Begründung |
+|---|---|---|---|
+| 1 | Kernelmodul `cramfs` ist verfügbar | umgesetzt | Das Dateisystem wird auf diesem System nicht verwendet. Jedes geladene Kernelmodul vergrössert die Angriffsfläche; die Deaktivierung kostet hier keine Funktionalität |
+| 2 | Core Dumps von SUID-Programmen erlaubt | umgesetzt | Ein Core Dump eines mit erhöhten Rechten laufenden Programms kann Passwörter oder Schlüssel im Klartext enthalten und ist für den normalen Betrieb nicht nötig |
+| 3 | Root-Anmeldung über SSH erlaubt | umgesetzt | Root ist der offensichtlichste Angriffspunkt für Brute-Force-Versuche, da der Benutzername auf jedem Linux-System existiert. Administrative Arbeiten laufen über sudo, die Funktionalität bleibt erhalten |
+| 4 | `MaxAuthTries` zu hoch | umgesetzt | Begrenzt die Anmeldeversuche pro Verbindung auf vier und verlangsamt damit automatisierte Angriffe erheblich |
+| 5 | Berechtigungen auf `/etc/ssh/sshd_config` zu weit | umgesetzt | Die Datei war für alle Benutzer lesbar. Ein Angreifer mit einem beliebigen Benutzerkonto könnte daraus die Konfiguration des Dienstes auslesen und gezielt Schwachstellen suchen |
+| 6 | `auditd` nicht installiert | umgesetzt | Protokolliert Systemaufrufe auf Kernelebene. Liefert zusätzlich Ereignisse, die Wazuh auswerten kann, und verbessert damit die Erkennung – die Massnahme wirkt also doppelt |
+| — | Kernelmodul `squashfs` deaktivieren | **verworfen** | Ubuntu Desktop bindet sämtliche Snap-Pakete über squashfs ein. Eine Deaktivierung würde unter anderem Firefox unbrauchbar machen. Der Befund stammt aus dem Server-Benchmark und ist für ein Desktop-System nicht anwendbar |
+
+Der letzte Eintrag zeigt exemplarisch, warum ein Score von 100 % kein sinnvolles Ziel ist. Die CIS-Benchmarks sind für gehärtete Serversysteme geschrieben; ein Teil der Vorgaben würde ein Desktop-System für seinen eigentlichen Zweck unbrauchbar machen. Entscheidend ist nicht die Zahl, sondern dass jeder Befund einmal bewertet wurde – umgesetzt oder begründet verworfen. Ein unbewerteter Befund ist das eigentliche Risiko.
+
+### 5.2 Durchgeführte Massnahmen
+
+**Kernelmodul cramfs deaktivieren**
+
+```bash
+echo -e "install cramfs /bin/false\nblacklist cramfs" | sudo tee /etc/modprobe.d/cramfs.conf
+```
+
+**Core Dumps von SUID-Programmen unterbinden**
+
+```bash
+echo "fs.suid_dumpable = 0" | sudo tee /etc/sysctl.d/60-hardening.conf
+sudo sysctl --system
+```
+
+```
+* /etc/sysctl.d/60-hardening.conf wird angewendet …
+fs.suid_dumpable = 0
+```
+
+Die Ausgabe von `sysctl --system` zeigt nebenbei, dass Ubuntu bereits eine Reihe eigener Härtungseinstellungen mitbringt, etwa `kernel.kptr_restrict`, `kernel.yama.ptrace_scope` und die `fs.protected_*`-Optionen. Das relativiert den tiefen CIS-Score: Das System ist nicht ungeschützt, es entspricht nur nicht in allen Punkten einem Server-Benchmark.
+
+**SSH härten und Dateiberechtigungen korrigieren**
+
+```bash
+sudo sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
+sudo sed -i 's/^#\?MaxAuthTries.*/MaxAuthTries 4/' /etc/ssh/sshd_config
+sudo chmod 600 /etc/ssh/sshd_config
+sudo chown root:root /etc/ssh/sshd_config
+sudo sshd -t && sudo systemctl restart ssh
+```
+
+Der Aufruf `sshd -t` prüft die Konfiguration auf Syntaxfehler und gibt bei korrekter Syntax nichts aus. Erst danach wird der Dienst neu gestartet. Ohne diese Prüfung riskiert man einen SSH-Dienst, der nach dem Neustart nicht mehr hochkommt – und sperrt sich bei Fernzugriff aus dem eigenen System aus.
+
+**auditd installieren und aktivieren**
+
+```bash
+sudo apt install -y auditd
+sudo systemctl enable --now auditd
+```
+
+Beim Einrichten des Pakets erschien die Meldung `policy-rc.d denied execution of start`. Der Dienst wurde durch die Paketverwaltung also nicht automatisch gestartet. Ob das anschliessende `enable --now` tatsächlich gegriffen hat, habe ich deshalb separat kontrolliert:
+
+```bash
+systemctl is-active auditd
+```
+
+```
+active
+```
+
+Diese Kontrolle war nicht überflüssig: Eine Meldung während der Installation, die nach einem Fehlschlag aussieht, hätte sonst unbemerkt bleiben können – mit dem Ergebnis, dass die Massnahme zwar dokumentiert, aber gar nicht wirksam gewesen wäre.
+
+### 5.3 Ergebnis
+
+Nach den Änderungen wurde der Agent neu gestartet, was einen erneuten SCA-Scan auslöst:
+
+```bash
+sudo systemctl restart wazuh-agent
+```
+
+| Kennzahl | Vor der Härtung (12:53) | Nach der Härtung (13:58) | Differenz |
+|---|---|---|---|
+| Passed | 101 | 109 | + 8 |
+| Failed | 144 | 161 | + 17 |
+| Not applicable | 34 | 9 | − 25 |
+| Score | 41 % | 40 % | − 1 |
+
+![Configuration Assessment nach der Härtung](Bilder/Monitoring-Wazuh/07-sca-nachher.png)
+
+### 5.4 Einordnung des Ergebnisses
+
+Das Resultat widerspricht der Erwartung: Der Score ist trotz umgesetzter Härtungsmassnahmen von 41 % auf 40 % **gesunken**. Die Erklärung steht in der Spalte *Not applicable*, die von 34 auf 9 zurückging.
+
+Ein CIS-Check kann nur bewertet werden, wenn die geprüfte Komponente überhaupt vorhanden ist. Vor der Härtung war `auditd` nicht installiert, weshalb Wazuh alle darauf aufbauenden Prüfungen als nicht anwendbar einstufte und aus der Wertung nahm. Mit der Installation wurden 25 dieser Checks schlagartig anwendbar – und die meisten davon schlagen fehl, weil der Dienst zwar läuft, aber noch keine Audit-Regeln konfiguriert sind. Genau das zeigt die Verschiebung: 17 zusätzliche Failed und 8 zusätzliche Passed bei unveränderter Gesamtzahl von 279 Checks.
+
+Daraus ergeben sich drei Erkenntnisse für die Praxis:
+
+**Der Score ist kein Mass für Sicherheit.** Er misst, wie viele der *anwendbaren* Prüfpunkte erfüllt sind. Wer eine Sicherheitskomponente nachrüstet, macht damit zwangsläufig neue Prüfpunkte sichtbar und verschlechtert kurzfristig seine Kennzahl. Ein System ohne Audit-Funktion erhält für diese Lücke nicht etwa Punktabzug – die Frage wird schlicht nicht gestellt.
+
+**Eine Kennzahl, die sich optimieren lässt, wird optimiert.** Wäre der Score eine Zielvorgabe, wäre die naheliegende Reaktion auf dieses Ergebnis, `auditd` wieder zu deinstallieren. Damit stünde die Zahl besser und das System schlechter da. Kennzahlen dieser Art gehören deshalb interpretiert und nicht als Zielwert vorgegeben.
+
+**Härtung ist nicht mit der Installation abgeschlossen.** `auditd` zu installieren war der erste Schritt; die Konfiguration passender Audit-Regeln wäre der zweite. Die 17 neuen Failed Checks sind insofern kein Rückschritt, sondern eine konkrete, priorisierte Arbeitsliste, die vorher gar nicht sichtbar war.
+
+Der Nutzen der übrigen Massnahmen bleibt davon unberührt. Root-Login über SSH, begrenzte Anmeldeversuche und korrigierte Dateiberechtigungen betreffen genau den Weg, über den ein Angreifer von aussen an dieses System herankommt. Ein geschlossener Zugang wiegt schwerer als mehrere Häkchen bei Prüfpunkten ohne Aussenwirkung.
+
+---
+
+## 6. Aufgetretene Probleme und Lösungen
 
 Die Inbetriebnahme verlief nicht reibungslos. Da die Fehlersuche den grössten Teil des Aufwands ausmachte, dokumentiere ich sie hier vollständig.
 
-### 5.1 Indexer läuft in den Start-Timeout
+### 6.1 Indexer läuft in den Start-Timeout
 
 **Symptom:** `wazuh-indexer` meldete `failed (Result: timeout)`, Manager und Dashboard blieben `inactive (dead)`.
 
@@ -364,7 +473,7 @@ curl -k -u admin:admin https://127.0.0.1:9200
 }
 ```
 
-### 5.2 Manager läuft in denselben Timeout
+### 6.2 Manager läuft in denselben Timeout
 
 **Symptom:** `Job for wazuh-manager.service failed because a timeout was exceeded.`
 
@@ -379,7 +488,7 @@ sudo systemctl daemon-reload
 sudo systemctl start wazuh-manager
 ```
 
-### 5.3 Dienste nicht für den Autostart aktiviert
+### 6.3 Dienste nicht für den Autostart aktiviert
 
 **Symptom:** Manager und Dashboard waren als `disabled` geladen.
 
@@ -389,7 +498,7 @@ sudo systemctl start wazuh-manager
 sudo systemctl enable --now wazuh-manager wazuh-dashboard
 ```
 
-### 5.4 Dashboard antwortet nicht auf Port 443
+### 6.4 Dashboard antwortet nicht auf Port 443
 
 **Symptom:** `ERR_CONNECTION_REFUSED` im Browser, obwohl der Dienst als `active (running)` gemeldet wurde.
 
@@ -424,7 +533,7 @@ LISTEN 0 511 0.0.0.0:443 0.0.0.0:* users:(("node",pid=3097,fd=19))
 
 Beim ersten Aufruf erschien noch die Meldung `Wazuh dashboard server is not ready yet`, da der Indexer noch im Zustand `activating` war. Nach wenigen Minuten war die Oberfläche verfügbar.
 
-### 5.5 Befehl auf dem falschen System ausgeführt
+### 6.5 Befehl auf dem falschen System ausgeführt
 
 **Symptom:** `sudo: dpkg: command not found` beim Agent-Installationsbefehl.
 
@@ -432,7 +541,7 @@ Beim ersten Aufruf erschien noch die Meldung `Wazuh dashboard server is not read
 
 ---
 
-## 6. Fazit
+## 7. Fazit
 
 ### Was Wazuh in diesem Aufbau geleistet hat
 
@@ -442,11 +551,13 @@ Am meisten beeindruckt hat mich, wie schnell aus einem unbeobachteten System ein
 
 ### Kritische Punkte
 
-Der Betrieb ist deutlich anspruchsvoller, als die Darstellung als «fertige VM zum Importieren» vermuten lässt. Von den vier Problemen in Kapitel 5 war keines im Dashboard sichtbar – alle mussten auf der Kommandozeile gefunden werden. Besonders lehrreich war der Fall des Dashboards: Der Dienst meldete `active (running)`, obwohl gar kein Prozess lief. Wer sich auf die Statusmeldung verlässt, sucht an der falschen Stelle. Für den produktiven Betrieb von Wazuh braucht es solides Linux-Wissen; mit der Klickbedienung im Dashboard allein kommt man nicht weit.
+Der Betrieb ist deutlich anspruchsvoller, als die Darstellung als «fertige VM zum Importieren» vermuten lässt. Von den vier Problemen in Kapitel 6 war keines im Dashboard sichtbar – alle mussten auf der Kommandozeile gefunden werden. Besonders lehrreich war der Fall des Dashboards: Der Dienst meldete `active (running)`, obwohl gar kein Prozess lief. Wer sich auf die Statusmeldung verlässt, sucht an der falschen Stelle. Für den produktiven Betrieb von Wazuh braucht es solides Linux-Wissen; mit der Klickbedienung im Dashboard allein kommt man nicht weit.
 
 Zweitens hat mich die Empfindlichkeit gegenüber der Startreihenfolge überrascht. Indexer, Manager und Dashboard bauen aufeinander auf, und ein zu knapp bemessenes Zeitlimit legt die ganze Kette lahm. Dass am Ende ein vollständiger Neustart der VM mehr brachte als jede Einzelmassnahme, zeigt, wie stark diese Abhängigkeiten wiegen.
 
 Drittens habe ich gesehen, wie leicht eine Fehlkonfiguration unbemerkt bleibt. Hätte der Agent eine nicht mehr existierende Logdatei überwacht oder eine Policy für die falsche Distribution geladen, wäre alles scheinbar in Ordnung gewesen – nur ohne Daten. Das halte ich für die gefährlichste Fehlerart überhaupt: nicht der Fehler, der auffällt, sondern der, der wie Normalbetrieb aussieht. Genau deshalb habe ich beide Punkte im Log nachgeprüft, statt sie anzunehmen.
+
+Die unerwartetste Erkenntnis lieferte aber der zweite SCA-Scan: Der Score sank nach der Härtung von 41 % auf 40 %. Dass eine Sicherheitsverbesserung die Kennzahl verschlechtern kann, weil sie neue Prüfpunkte überhaupt erst anwendbar macht, hätte ich vorher nicht erwartet. Seither betrachte ich solche Prozentwerte mit deutlich mehr Vorsicht – und verstehe, warum eine Zahl, die als Zielvorgabe dient, am Ende Anreize für genau die falschen Entscheidungen setzt.
 
 ### Was ich gelernt habe
 
@@ -458,9 +569,9 @@ Zuletzt hat sich mein Blick auf das eigene Setup verändert. Ich überwache gena
 
 ---
 
-## 7. Anhang
+## 8. Anhang
 
-### 7.1 Wichtige Pfade
+### 8.1 Wichtige Pfade
 
 | Pfad | Inhalt |
 |---|---|
@@ -471,7 +582,7 @@ Zuletzt hat sich mein Blick auf das eigene Setup verändert. Ich überwache gena
 | `/var/log/wazuh-indexer/` | Logs des Indexers, nicht im systemd-Journal |
 | `/etc/wazuh-dashboard/opensearch_dashboards.yml` | Konfiguration des Dashboards |
 
-### 7.2 Befehlsübersicht
+### 8.2 Befehlsübersicht
 
 ```bash
 # Status der Komponenten
@@ -491,7 +602,7 @@ sudo /var/ossec/bin/agent_control -l
 sudo tail -f /var/ossec/logs/ossec.log
 ```
 
-### 7.3 Quellen
+### 8.3 Quellen
 
 - Wazuh-Dokumentation, Virtual Machine (OVA): `https://documentation.wazuh.com/current/deployment-options/virtual-machine/virtual-machine.html`
 - Wazuh-Dokumentation, Agent Enrollment Requirements: `https://documentation.wazuh.com/current/user-manual/agent/agent-enrollment/requirements.html`
