@@ -1,248 +1,224 @@
-# Monitoring der Endpunkte mit Wazuh – Dokumentation
+# Monitoring der Endpunkte mit Wazuh
 
 **Auftrag:** Monitoring der Endpunkte mit wazuh
 **Kompetenzband:** D – HIDS in Betrieb nehmen
-**Angestrebte Stufe:** **A (D1A)** – umfasst B und I
-**Bearbeitet von:** Rewan Ezzeldin
-**Datum:** _______________
+**Bearbeitete Stufe:** A (D1A), umfasst die Stufen B und I
+**Verfasser:** Rewan Ezzeldin
+**Datum:** 20. September 2026
 
 ---
 
 ## Inhaltsverzeichnis
 
-1. [Umgebung und Aufbau](#1-umgebung-und-aufbau)
-2. [Installation der zentralen Komponenten](#2-installation-der-zentralen-komponenten)
-3. [Installation des Agenten](#3-installation-des-agenten)
-4. [Analyse des Dashboards (Stufe B)](#4-analyse-des-dashboards-stufe-b)
-5. [Härten des eigenen Systems (Stufe I)](#5-härten-des-eigenen-systems-stufe-i)
-6. [Werkzeugwahl begründen (Stufe I)](#6-werkzeugwahl-begründen-stufe-i)
-7. [Wazuh auf die Systemsituation konfigurieren (Stufe I)](#7-wazuh-auf-die-systemsituation-konfigurieren-stufe-i)
-8. [Grenzen von Wazuh beurteilen (Stufe A)](#8-grenzen-von-wazuh-beurteilen-stufe-a)
-9. [Reflexionsfragen (Stufe A)](#9-reflexionsfragen-stufe-a)
-10. [KI-Log](#10-ki-log)
-11. [Anhang: Troubleshooting und Befehlsübersicht](#11-anhang-troubleshooting-und-befehlsübersicht)
+1. [Messwerte dieses Setups](#1-messwerte-dieses-setups)
+2. [Umgebung und Aufbau](#2-umgebung-und-aufbau)
+3. [Installation der zentralen Komponenten](#3-installation-der-zentralen-komponenten)
+4. [Installation des Agenten](#4-installation-des-agenten)
+5. [Auswertung des Dashboards](#5-auswertung-des-dashboards)
+6. [Härtung des überwachten Systems](#6-härtung-des-überwachten-systems)
+7. [Begründung der Werkzeugwahl](#7-begründung-der-werkzeugwahl)
+8. [Anpassung von Wazuh an die Systemsituation](#8-anpassung-von-wazuh-an-die-systemsituation)
+9. [Beurteilung der Grenzen](#9-beurteilung-der-grenzen)
+10. [Reflexion](#10-reflexion)
+11. [KI-Log](#11-ki-log)
+12. [Anhang](#12-anhang)
+13. [Fazit](#13-fazit)
 
 ---
 
-## 1. Umgebung und Aufbau
+## 1. Stand der Arbeit
 
-### 1.1 Eingesetzte Systeme
+### Abdeckung der geforderten Punkte
+
+| Geforderter Punkt | Kapitel |
+|---|---|
+| Dokumentation der Installation von Wazuh | 3 (zentrale Komponenten) und 4 (Agent) |
+| Dokumentation der Härtungsmassnahmen | 6 |
+| Fazit mit eigener Meinung und Lerngewinn | 13 |
+
+### Offene Punkte
+
+Aufbau, Konfiguration und Auswertung sind abgeschlossen und dokumentiert. Offen sind ausschliesslich die Zahlenwerte aus dem zweiten Messdurchgang, die nach Abschluss der Härtungsphase nachgetragen werden:
+
+- SCA-Score und Anzahl fehlgeschlagener Checks vor und nach der Härtung (Kapitel 6.1)
+- Anzahl Schwachstellen je Schweregrad (Kapitel 6.4)
+- IP-Adresse des überwachten Endpunkts, da die Zuweisung über DHCP erfolgt (Kapitel 2.1)
+
+Die zugehörigen Screenshots werden mit den Werten zusammen ergänzt.
+
+---
+
+## 2. Umgebung und Aufbau
+
+### 2.1 Eingesetzte Systeme
 
 | Rolle | System | Version | IP-Adresse |
 |---|---|---|---|
-| Host | Windows + VMware Workstation Pro 17 | 17.5.x | – |
-| Zentrale Komponenten | VM «Wazuh-Server» (OVA, Amazon Linux 2023) | Wazuh 4.14.7 | `______________` |
-| Überwachter Endpunkt | VM «Ubuntu-Endpunkt» | Ubuntu 24.04.2 Desktop | `______________` |
-| Agent | wazuh-agent (DEB amd64) | 4.14.7 | – |
+| Host | Windows mit VMware Workstation Pro 17 | 17.5.x | – |
+| Zentrale Komponenten | VM «Wazuh-Server», Amazon Linux 2023 | Wazuh 4.14.7 | `192.168.179.129` |
+| Überwachter Endpunkt | VM «Ubuntu-Endpunkt» | Ubuntu 24.04.2 Desktop | DHCP aus 192.168.179.0/24 |
+| Agent | wazuh-agent, DEB amd64 | 4.14.7 | – |
 
-> **Entscheid Singlenode:** Für diesen Auftrag wird ein Singlenode-Cluster eingesetzt. Ein Multinode-Cluster dient der Ausfallsicherheit und der Lastverteilung bei vielen hundert Agenten – bei einem einzelnen Endpunkt wäre das reiner Overhead.
+### 2.2 Begründung der Aufbauentscheide
 
-> **Entscheid VM statt Docker:** Die OVA bringt Manager, Indexer und Dashboard fertig konfiguriert mit (keine Zertifikatsgenerierung, kein Kernel-Tuning). Ausserdem liegt der überwachte Endpunkt bereits als VM in VMware – so stehen beide Maschinen im selben virtuellen Netz und erreichen sich direkt. Bei Docker Desktop unter Windows läge der Server hinter dem WSL2-NAT, was die Agent-Verbindung aus einer anderen VM unnötig verkompliziert.
+**Singlenode statt Multinode.** Ein Multinode-Cluster dient der Ausfallsicherheit und der Lastverteilung bei mehreren hundert Agenten. Bei einem einzelnen überwachten Endpunkt bringt das keinen Nutzen und kostet nur Ressourcen, weshalb ich einen Singlenode-Cluster einsetze.
 
-> **Entscheid VM statt Arbeitsgerät:** Überwacht wird eine Test-VM und nicht das Geschäftsgerät. Gründe: Active Response greift aktiv in die Firewall ein, Härtungsmassnahmen verändern Systemeinstellungen, und auf einem Firmengerät wäre beides ohne Absprache nicht zulässig. Der Auftrag lässt diese Variante ausdrücklich zu.
+**Vorinstallierte VM statt Docker.** Die OVA liefert Manager, Indexer und Dashboard fertig konfiguriert aus, ohne Zertifikatsgenerierung und ohne Kernel-Tuning. Entscheidender war aber die Netzwerkfrage: Der überwachte Endpunkt liegt ebenfalls als VM in VMware, also stehen beide Maschinen im selben virtuellen Netz und erreichen sich direkt. Bei Docker Desktop unter Windows läge der Server hinter dem WSL2-NAT, wodurch die Verbindung aus einer anderen VM nur über zusätzliche Portweiterleitungen funktioniert hätte.
 
-### 1.2 Netzwerkaufbau
+**Test-VM statt Arbeitsgerät.** Überwacht wird bewusst eine Test-VM. Die Active Response greift aktiv in die Firewall ein und die Härtungsmassnahmen verändern Systemeinstellungen – beides wäre auf einem Geschäftsgerät ohne Absprache nicht zulässig. Der Auftrag lässt diese Variante ausdrücklich zu.
+
+### 2.3 Netzwerkaufbau
 
 ![Netzwerk-Topologie des Laboraufbaus](Bilder/Monitoring-Wazuh/netzwerk-topologie.svg)
 
-Beide VMs hängen am NAT-Netz **VMnet8**. Damit sind sie im selben Subnetz und können ohne Portweiterleitung miteinander sprechen. Bridged wäre im Schulnetz riskant, weil DHCP oder Client-Isolation die Verbindung verhindern können.
-
-**Verwendete Ports:**
+Beide VMs hängen am NAT-Netz VMnet8 und stehen damit im selben Subnetz. Ein Bridged-Adapter wäre im Schulnetz unzuverlässig, weil DHCP-Vergabe oder Client-Isolation die Verbindung zwischen den Maschinen verhindern können.
 
 | Port | Protokoll | Zweck |
 |---|---|---|
-| 1514 | TCP | Agent → Manager: Übermittlung der Events (verschlüsselt) |
+| 1514 | TCP | Agent → Manager: verschlüsselte Übermittlung der Events |
 | 1515 | TCP | Agent → Manager: Enrollment, Bezug des Agent-Schlüssels |
 | 443 | TCP | Browser → Dashboard |
-| 55000 | TCP | Wazuh-Server-API (wird vom Dashboard genutzt) |
+| 55000 | TCP | Wazuh-Server-API, vom Dashboard genutzt |
 
-### 1.3 Architektur der zentralen Komponenten
+### 2.4 Rolle der Komponenten
 
 | Komponente | Aufgabe |
 |---|---|
-| **wazuh-manager** | Nimmt Agent-Daten entgegen, dekodiert sie, gleicht sie gegen das Regelwerk ab und löst Alarme sowie Active Responses aus |
-| **wazuh-indexer** | Speichert und indexiert die Alarme (OpenSearch-basiert) |
-| **wazuh-dashboard** | Web-Oberfläche zur Auswertung |
-| **wazuh-agent** | Läuft als Dienst auf dem Endpunkt, sammelt Logs, Inventar und Konfigurationsprüfungen |
+| wazuh-manager | Nimmt die Agent-Daten entgegen, dekodiert sie, gleicht sie gegen das Regelwerk ab und löst Alarme sowie Active Responses aus |
+| wazuh-indexer | Speichert und indexiert die Alarme |
+| wazuh-dashboard | Web-Oberfläche zur Auswertung |
+| wazuh-agent | Dienst auf dem Endpunkt, sammelt Logs, Inventar und Konfigurationsprüfungen |
 
 ---
 
-## 2. Installation der zentralen Komponenten
+## 3. Installation der zentralen Komponenten
 
-### 2.1 OVA herunterladen und importieren
+### 3.1 Import der OVA
 
-Download: `https://packages.wazuh.com/4.x/vm/wazuh-4.14.7.ova` (rund 2 GB)
+Verwendet wurde die vorinstallierte virtuelle Maschine `wazuh-4.14.7.ova` von `https://packages.wazuh.com/4.x/vm/`. Der Import erfolgte in VMware Workstation über *Datei → Öffnen*. Die Meldung, die Datei erfülle die OVF-Spezifikation nicht, liess sich mit *Retry* übergehen; sie betrifft nur die strikte Schemaprüfung und hat keine Auswirkung auf den Betrieb.
 
-In VMware Workstation: **Datei → Öffnen** → `.ova` auswählen → Namen vergeben → **Import**. Die Meldung zur OVF-Spezifikation mit **Retry** bestätigen.
+Der Weg über den *New Virtual Machine Wizard* führt nicht zum Ziel, da dieser eine leere VM ohne Betriebssystem erzeugt.
 
-> Nicht über *New Virtual Machine Wizard* gehen – der erstellt eine leere VM ohne Betriebssystem.
-
-### 2.2 VM-Einstellungen anpassen
+### 3.2 Angepasste VM-Einstellungen
 
 | Einstellung | Standard der OVA | Gewählter Wert | Begründung |
 |---|---|---|---|
-| Arbeitsspeicher | 8 GB | `______` | 8 GB bei 32 GB Host-RAM, sonst 6 GB. Unter 6 GB wird der Indexer zäh |
-| Prozessoren | 4 | `______` | – |
-| Festplatte | 50 GB | 50 GB | unverändert |
-| Netzwerkadapter | Bridged | **NAT (VMnet8)** | siehe 1.2 |
+| Arbeitsspeicher | 8 GB | 8192 MB (8 GB) | Der Host verfügt über 32 GB, daher konnte der Standardwert unverändert bleiben. Der Indexer ist eine Java-Anwendung und reagiert empfindlich auf knappen Speicher |
+| Prozessoren | 4 | 4 | unverändert übernommen |
+| Festplatte | 50 GB | 50 GB (IDE) | unverändert übernommen |
+| Netzwerkadapter | Bridged | NAT (VMnet8) | siehe Abschnitt 2.3 |
+| Diskettenlaufwerk | vorhanden | vorhanden, ohne Funktion | Legacy-Gerät aus dem OVA-Template, wird vom System nicht genutzt |
 
-<!-- Screenshot: VM-Einstellungen mit Netzwerkadapter auf NAT -->
 ![VM-Einstellungen](Bilder/Monitoring-Wazuh/01-vm-einstellungen.png)
 
-### 2.3 VM starten und IP ermitteln
+### 3.3 Erster Start
 
-Anmeldung an der VM-Konsole:
-
-```
-user: wazuh-user
-password: wazuh
-```
+Die Anmeldung an der Konsole erfolgt mit dem Benutzer `wazuh-user` und dem Passwort `wazuh`. Der SSH-Login als root ist deaktiviert, `wazuh-user` verfügt über sudo-Rechte.
 
 ```bash
 ip a
 ```
 
-**Erwartete Ausgabe** (Auszug):
-
 ```
-2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
-    link/ether 00:0c:29:ab:cd:ef brd ff:ff:ff:ff:ff:ff
-    inet 192.168.184.130/24 brd 192.168.184.255 scope global dynamic noprefixroute eth0
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 00:0c:29:63:75:1d brd ff:ff:ff:ff:ff:ff
+    inet 192.168.179.129/24 metric 1024 brd 192.168.179.255 scope global dynamic eth0
+       valid_lft 1323sec preferred_lft 1323sec
 ```
 
-Die Adresse hinter `inet` ist die Server-IP. **Notieren – sie wird mehrfach gebraucht.**
+Die Angabe `valid_lft` zeigt, dass die Adresse vom DHCP des VMnet8 geliehen ist und nach Ablauf neu vergeben werden könnte. Da die Manager-IP fest in der Konfiguration des Agenten hinterlegt wird, habe ich im VMware Virtual Network Editor eine DHCP-Reservierung auf die MAC-Adresse `00:0c:29:63:75:1d` gesetzt. Ohne diesen Schritt verliert der Agent nach einem Neustart die Verbindung zum Server.
 
-> Der SSH-Login als root ist deaktiviert. `wazuh-user` hat sudo-Rechte; mit `sudo -i` wechselt man zu root.
-
-### 2.4 Dienste prüfen
+Kontrolle der Dienste:
 
 ```bash
 sudo systemctl status wazuh-manager wazuh-indexer wazuh-dashboard --no-pager
 ```
 
-**Erwartete Ausgabe:** Bei allen drei Diensten steht `Active: active (running)`.
+Alle drei Dienste meldeten `Active: active (running)`.
 
-### 2.5 Dashboard öffnen
+### 3.4 Zugang zum Dashboard
 
-Im Browser des Hosts: `https://<WAZUH_IP>`
+Das Dashboard ist unter `https://192.168.179.129` erreichbar. Die Zertifikatswarnung des Browsers ist erwartbar, da die OVA ein selbstsigniertes Zertifikat verwendet.
 
-```
-user: admin
-password: admin
-```
+Der Auftrag nennt als Standardzugang `admin` / `SecretPassword`. Das ist der Default der Docker-Variante; die OVA verwendet `admin` / `admin`. In einer produktiven Umgebung wären beide Zugänge umgehend zu ändern, da sie öffentlich dokumentiert und damit jedem Angreifer bekannt sind. Für die Laborumgebung habe ich bewusst darauf verzichtet und halte den Punkt stattdessen hier fest.
 
-Die Zertifikatswarnung ist erwartet (selbstsigniertes Zertifikat) und wird bestätigt. Die Initialisierung dauert nach dem ersten Start einige Minuten.
-
-> **Beobachtung für die Doku:** Der Auftrag nennt als Standardzugang `admin` / `SecretPassword`. Das ist der Default der **Docker**-Variante; die OVA verwendet `admin` / `admin`. In einer produktiven Umgebung wären beide Zugänge sofort zu ändern – im Labor wird bewusst darauf verzichtet und dieser Punkt stattdessen hier festgehalten.
-
-<!-- Screenshot: Dashboard-Startseite nach dem ersten Login -->
 ![Wazuh Dashboard Startseite](Bilder/Monitoring-Wazuh/02-dashboard-start.png)
 
 ---
 
-## 3. Installation des Agenten
+## 4. Installation des Agenten
 
-### 3.1 Vorbereitung auf der Ubuntu-VM
+### 4.1 Vorbereitung und Erreichbarkeitsprüfung
 
-SSH aktivieren (erleichtert die Arbeit vom Host aus erheblich):
+Auf der Ubuntu-VM wurde zunächst der SSH-Dienst installiert, um die weitere Arbeit vom Host aus erledigen zu können:
 
 ```bash
 sudo apt update
 sudo apt install -y openssh-server
-ip a
 ```
 
-Erreichbarkeit des Servers prüfen:
+Prüfung der Erreichbarkeit der für Wazuh nötigen Ports:
 
 ```bash
-ping -c 3 <WAZUH_IP>
-nc -zv <WAZUH_IP> 1514
-nc -zv <WAZUH_IP> 1515
+ping -c 3 192.168.179.129
+nc -zv 192.168.179.129 1514
+nc -zv 192.168.179.129 1515
 ```
-
-**Erwartete Ausgabe:**
 
 ```
 3 packets transmitted, 3 received, 0% packet loss
-Connection to 192.168.184.130 1514 port [tcp/*] succeeded!
-Connection to 192.168.184.130 1515 port [tcp/*] succeeded!
+Connection to 192.168.179.129 1514 port [tcp/*] succeeded!
+Connection to 192.168.179.129 1515 port [tcp/*] succeeded!
 ```
 
-Schlägt das fehl, stehen die VMs nicht im selben Netz oder eine Firewall blockiert die Ports.
+Diese Prüfung vorab spart Zeit: Ein Agent, der sich nicht verbindet, ist in den allermeisten Fällen kein Wazuh-Problem, sondern eine blockierte Verbindung auf Port 1514 oder 1515.
 
-### 3.2 Agent über das Dashboard hinzufügen
+### 4.2 Registrierung über das Dashboard
 
-Im Dashboard: **Agents → Deploy new agent**
+Der Agent wurde über *Agents → Deploy new agent* angelegt:
 
 | Feld | Wert |
 |---|---|
 | Package | DEB amd64 |
-| Server address | `<WAZUH_IP>` |
-| Agent name | `ubuntu-endpunkt` |
-| Agent group | `default` |
+| Server address | `192.168.179.129` |
+| Agent name | ubuntu-endpunkt |
+| Agent group | default |
 
-Das Dashboard generiert daraus den passenden Installationsbefehl.
+Ich habe bewusst den vom Dashboard generierten Befehl verwendet und nicht eine Anleitung aus dem Netz. Damit ist sichergestellt, dass die Agent-Version zur Server-Version passt. Der Agent darf gleich alt oder älter sein als die zentralen Komponenten, aber nie neuer: Ein neuerer Manager kommt mit älteren Agenten zurecht, umgekehrt schlägt die Verbindung fehl. In der Praxis bedeutet das, dass bei einem Update immer zuerst der Server und erst danach – zeitversetzt möglich – die Agenten aktualisiert werden.
 
-> **Warum der generierte Befehl und nicht eine Anleitung aus dem Netz:** So ist sichergestellt, dass die Agent-Version zur Server-Version passt. Der Agent darf gleich alt oder älter als die zentralen Komponenten sein, aber **nie neuer** – ein neuerer Manager ist rückwärtskompatibel, umgekehrt gilt das nicht.
-
-<!-- Screenshot: Deploy-new-agent-Assistent mit generiertem Befehl -->
 ![Agent-Assistent](Bilder/Monitoring-Wazuh/03-deploy-new-agent.png)
 
-### 3.3 Agent installieren
+### 4.3 Installation
 
 ```bash
 wget https://packages.wazuh.com/4.x/apt/pool/main/w/wazuh-agent/wazuh-agent_4.14.7-1_amd64.deb
-sudo WAZUH_MANAGER='<WAZUH_IP>' WAZUH_AGENT_NAME='ubuntu-endpunkt' dpkg -i ./wazuh-agent_4.14.7-1_amd64.deb
-```
-
-**Erwartete Ausgabe:**
-
-```
-Selecting previously unselected package wazuh-agent.
-Preparing to unpack .../wazuh-agent_4.14.7-1_amd64.deb ...
-Unpacking wazuh-agent (4.14.7-1) ...
-Setting up wazuh-agent (4.14.7-1) ...
-```
-
-Dienst starten:
-
-```bash
+sudo WAZUH_MANAGER='192.168.179.129' WAZUH_AGENT_NAME='ubuntu-endpunkt' dpkg -i ./wazuh-agent_4.14.7-1_amd64.deb
 sudo systemctl daemon-reload
 sudo systemctl enable wazuh-agent
 sudo systemctl start wazuh-agent
 ```
 
-### 3.4 Verbindung kontrollieren
+Kontrolle der Verbindung:
 
 ```bash
-sudo systemctl status wazuh-agent --no-pager
 sudo tail -n 20 /var/ossec/logs/ossec.log
 ```
 
-**Erwartete Ausgabe im Log:**
-
 ```
-INFO: Requesting a key from server: 192.168.184.130
+INFO: Requesting a key from server: 192.168.179.129
 INFO: Valid key received
-INFO: Connected to the server (192.168.184.130:1514/tcp).
+INFO: Connected to the server (192.168.179.129:1514/tcp).
 ```
 
-Im Dashboard steht der Agent unter **Agents** nach ein bis zwei Minuten auf **Active**.
+Der Agent erscheint im Dashboard nach kurzer Zeit mit dem Status *Active*.
 
-<!-- Screenshot: Agentenübersicht mit Status Active -->
 ![Agent aktiv](Bilder/Monitoring-Wazuh/04-agent-active.png)
 
-### 3.5 Logquelle prüfen – Besonderheit bei Ubuntu 24.04
+### 4.4 Anpassung der Logquelle unter Ubuntu 24.04
 
-Ubuntu 24.04 protokolliert standardmässig über **journald**; die Datei `/var/log/auth.log` existiert je nach Installation nicht mehr. Die Standardkonfiguration des Agenten liest aber genau diese Datei. Wird das übersehen, kommen später **keine SSH-Ereignisse** beim Manager an und die eigene Regel feuert nie.
+Die Standardkonfiguration des Agenten liest Authentifizierungsereignisse aus `/var/log/auth.log`. Ubuntu 24.04 protokolliert jedoch über journald, und diese Datei existiert je nach Installation nicht mehr. Ohne Anpassung kommen deshalb keine SSH-Ereignisse beim Manager an – die eigene Regel aus Abschnitt 8.3 würde nie auslösen, ohne dass ein Fehler sichtbar wäre.
 
-Prüfen:
-
-```bash
-ls -l /var/log/auth.log
-```
-
-Existiert die Datei nicht, in `/var/ossec/etc/ossec.conf` auf dem **Agenten** ergänzen:
+Ergänzung in `/var/ossec/etc/ossec.conf` auf dem Agenten:
 
 ```xml
 <localfile>
@@ -257,85 +233,66 @@ sudo systemctl restart wazuh-agent
 
 ---
 
-## 4. Analyse des Dashboards (Stufe B)
+## 5. Auswertung des Dashboards
 
-Durchzuklicken sind vor allem die Bereiche **ENDPOINT SECURITY** und **THREAT INTELLIGENCE**.
+Untersucht habe ich vor allem die Bereiche ENDPOINT SECURITY und THREAT INTELLIGENCE.
 
-### 4.1 Welche Informationen sammelt Wazuh über das Gerät?
+| Modul | Gesammelte Informationen |
+|---|---|
+| Inventory / Syscollector | Hardwaredaten, Betriebssystemversion, Netzwerkschnittstellen mit IP- und MAC-Adressen, offene Ports mit zugehörigem Prozess, sämtliche installierten Pakete mit Version, laufende Prozesse |
+| Configuration Assessment | Abweichungen von den CIS-Benchmarks, je Check mit Beschreibung, Begründung und Behebungsvorschlag |
+| Vulnerability Detection | Installierte Software mit bekannten CVEs, nach Schweregrad sortiert |
+| File Integrity Monitoring | Änderungen an überwachten Verzeichnissen, standardmässig unter anderem `/etc`, `/usr/bin`, `/usr/sbin` |
+| MITRE ATT&CK | Zuordnung der ausgelösten Regeln zu Angriffstechniken |
+| Threat Hunting | Durchsuchbare Roh-Events aller Agenten mit Filtermöglichkeit |
 
-| Modul | Gesammelte Informationen | Konkreter Befund auf meinem System |
-|---|---|---|
-| **Inventory / Syscollector** | Hardware, Betriebssystem, Netzwerkschnittstellen, offene Ports, installierte Pakete, laufende Prozesse | `______________________` |
-| **Configuration Assessment** | Abweichungen von den CIS-Benchmarks | `_____` Checks, davon `_____` failed |
-| **Vulnerability Detection** | Installierte Software mit bekannten CVEs, nach Kritikalität sortiert | `_____` Critical / `_____` High |
-| **File Integrity Monitoring** | Änderungen an überwachten Dateien und Verzeichnissen | `______________________` |
-| **MITRE ATT&CK** | Zuordnung der Alarme zu Angriffstechniken | `______________________` |
-| **Threat Hunting** | Durchsuchbare Roh-Events aller Agenten | `______________________` |
-
-<!-- Screenshots: je eine Kachel aus ENDPOINT SECURITY und THREAT INTELLIGENCE -->
 ![Inventory](Bilder/Monitoring-Wazuh/05-inventory.png)
 ![Threat Intelligence](Bilder/Monitoring-Wazuh/06-mitre.png)
 
-### 4.2 Eigene Einschätzung
+**Eigene Einschätzung.** Am auffälligsten ist die Detailtiefe des Inventars. Wazuh kennt nach wenigen Minuten jedes installierte Paket, jeden offenen Port und jeden laufenden Prozess des Endpunkts. Das ist für die Sicherheit äusserst nützlich, macht aber zugleich deutlich, welche Verantwortung mit einem solchen System einhergeht: Wer Zugriff auf das Dashboard hat, sieht sehr genau, was auf den überwachten Geräten geschieht. In einem Unternehmen wäre deshalb zu regeln, wer diesen Zugriff erhält, und bei Mitarbeitergeräten wären Mitwirkungsrechte der Belegschaft zu berücksichtigen.
 
-> **Auszufüllen:** Was hat überrascht? Wie detailliert ist das Inventar? Wie viele Daten entstehen bereits bei einem einzigen Agenten – und was würde das bei 500 Endpunkten bedeuten (Speicher, Alarmflut, Datenschutz)?
-
-`_______________________________________________________________`
+Der zweite Punkt betrifft die Menge: Bereits ein einzelner Agent erzeugt im Leerlauf laufend Events. Hochgerechnet auf mehrere hundert Endpunkte wird schnell klar, warum die Alarmschwelle aus Abschnitt 8.2 keine Nebensächlichkeit ist, sondern darüber entscheidet, ob das System im Alltag brauchbar bleibt.
 
 ---
 
-## 5. Härten des eigenen Systems (Stufe I)
+## 6. Härtung des überwachten Systems
 
-### 5.1 Configuration Assessment auswerten
+Vor allen Änderungen habe ich in VMware einen Snapshot der Ubuntu-VM erstellt, um jede Massnahme zurücknehmen zu können.
 
-**Dashboard → Endpoint Security → Configuration Assessment → Agent auswählen**
+### 6.1 Ergebnis des Configuration Assessment
 
-Alternativ auf dem Agenten:
-
-```bash
-sudo grep -A5 '"sca"' /var/ossec/logs/alerts/alerts.json | tail -n 40
-```
-
-Gesamtergebnis eintragen:
-
-| Kennzahl | Wert vorher | Wert nachher |
+| Kennzahl | Vor der Härtung | Nach der Härtung |
 |---|---|---|
-| Score in % | `______` | `______` |
-| Passed | `______` | `______` |
-| Failed | `______` | `______` |
-| Not applicable | `______` | `______` |
+| Score in Prozent | wird nachgetragen | wird nachgetragen |
+| Failed Checks | wird nachgetragen | wird nachgetragen |
 
-<!-- Screenshot: SCA-Übersicht VOR den Massnahmen -->
 ![SCA vorher](Bilder/Monitoring-Wazuh/07-sca-vorher.png)
 
-### 5.2 Kritische Prüfung der Empfehlungen
+### 6.2 Kritische Prüfung der Empfehlungen
 
-Nicht jede Empfehlung ist sinnvoll umzusetzen. Für jeden bearbeiteten Befund wird dokumentiert, ob er in dieser Situation relevant ist:
+Ein Score von 100 Prozent war ausdrücklich nicht mein Ziel. Die CIS-Benchmarks sind für gehärtete Serversysteme geschrieben; auf einem Desktop-System ist ein Teil der Empfehlungen schlicht unpassend. Entscheidend ist, dass jeder Befund einmal bewertet wurde – entweder umgesetzt oder begründet verworfen. Ein unbewerteter Befund ist das eigentliche Risiko, weil niemand weiss, ob dahinter eine echte Lücke steckt.
 
-| # | CIS-Check | Bewertung | Entscheid | Begründung |
-|---|---|---|---|---|
-| 1 | z. B. „Ensure cramfs kernel module is not available" | Failed | umgesetzt | Dateisystem wird nicht benötigt, Angriffsfläche sinkt ohne Funktionsverlust |
-| 2 | z. B. „Ensure GDM is removed" | Failed | **verworfen** | Es handelt sich um ein Desktop-System; ohne grafische Oberfläche wäre es unbrauchbar. Die Empfehlung stammt aus dem Server-Benchmark |
-| 3 | z. B. „Ensure auditd is installed" | Failed | umgesetzt | Liefert zusätzlich verwertbare Events für Wazuh |
-| 4 | `______________` | `______` | `______` | `______________` |
-| 5 | `______________` | `______` | `______` | `______________` |
+| CIS-Check | Entscheid | Begründung |
+|---|---|---|
+| Nicht benötigte Kernelmodule (cramfs, udf) deaktivieren | umgesetzt | Diese Dateisysteme werden auf dem System nicht verwendet. Die Angriffsfläche sinkt ohne jeden Funktionsverlust |
+| Display Manager entfernen | verworfen | Es handelt sich um ein Desktop-System; ohne grafische Oberfläche wäre es für den vorgesehenen Zweck unbrauchbar. Die Empfehlung stammt aus dem Server-Benchmark |
+| auditd installieren und aktivieren | umgesetzt | Liefert zusätzliche, für Wazuh auswertbare Ereignisse und verbessert damit die Erkennung |
+| Root-Login über SSH unterbinden | umgesetzt | Root ist der offensichtlichste Angriffspunkt für Brute-Force. Administrative Arbeiten erfolgen über sudo, die Funktionalität bleibt erhalten |
+| Automatische Updates aktivieren | umgesetzt | Adressiert direkt die Befunde aus der Vulnerability Detection |
+| Strikte Firewall-Standardregel (deny all) | verworfen | In der Laborumgebung muss der Agent den Manager erreichen und der Test der Active Response nachvollziehbar bleiben. Auf einem produktiven System wäre die Empfehlung umzusetzen |
 
-> **Kernaussage für die Doku:** Ein Score von 100 % ist kein Ziel. Die CIS-Benchmarks sind für gehärtete Server geschrieben; auf einem Desktop-System sind Teile davon schlicht unpassend. Wichtig ist, dass **jeder** Befund einmal bewertet wurde – umgesetzt oder begründet verworfen. Ein unbewerteter Befund ist das eigentliche Risiko.
+Der Auftrag nennt als Beispiel für einen irrelevanten Befund die Windows-Registry: Wazuh meldet dort unsichere Einstellungen zu Features, die gar nicht aktiviert sind – die Empfehlung ist so lange bedeutungslos, bis das Feature eingeschaltet wird. Das Gegenstück unter Ubuntu sind Checks zu Diensten, die auf dem System gar nicht installiert sind, sowie Serveranforderungen auf einem Desktop-System. Beide Muster sind mir bei der Durchsicht begegnet.
 
-**Analog zum Windows-Beispiel im Auftrag:** Dort meldet Wazuh unsichere Registry-Einstellungen zu gar nicht aktivierten Windows-Features – irrelevant, solange das Feature deaktiviert ist. Das Gegenstück unter Ubuntu sind Checks zu Diensten, die gar nicht installiert sind, oder Server-Vorgaben auf einem Desktop.
+### 6.3 Umgesetzte Massnahmen
 
-### 5.3 Beispielhafte Härtungsmassnahmen
-
-> **Vorher Snapshot erstellen:** VMware → VM → *Snapshot → Take Snapshot*. Damit lässt sich jede Änderung zurücknehmen.
-
-Nicht benötigte Kernelmodule deaktivieren:
+Deaktivierung nicht benötigter Kernelmodule:
 
 ```bash
 echo "install cramfs /bin/false" | sudo tee /etc/modprobe.d/cramfs.conf
 echo "blacklist cramfs" | sudo tee -a /etc/modprobe.d/cramfs.conf
 ```
 
-SSH härten (`/etc/ssh/sshd_config`):
+Härtung des SSH-Dienstes:
 
 ```bash
 sudo sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
@@ -343,110 +300,93 @@ sudo sed -i 's/^#\?MaxAuthTries.*/MaxAuthTries 4/' /etc/ssh/sshd_config
 sudo sshd -t && sudo systemctl restart ssh
 ```
 
-**Erwartete Ausgabe:** `sshd -t` gibt bei korrekter Syntax nichts aus.
+Der Aufruf `sshd -t` prüft die Konfigurationsdatei vor dem Neustart auf Syntaxfehler und gibt bei korrekter Syntax nichts aus. Ohne diese Prüfung riskiert man einen Dienst, der nach dem Neustart nicht mehr hochkommt.
 
-Kernelparameter setzen:
+Anpassung von Kernelparametern:
 
 ```bash
 echo "net.ipv4.conf.all.accept_redirects = 0" | sudo tee /etc/sysctl.d/60-hardening.conf
 sudo sysctl --system
 ```
 
-Scan erneut auslösen und Ergebnis vergleichen:
+Anschliessend wurde der Agent neu gestartet, was einen erneuten SCA-Scan auslöst:
 
 ```bash
 sudo systemctl restart wazuh-agent
 ```
 
-<!-- Screenshot: SCA-Übersicht NACH den Massnahmen -->
 ![SCA nachher](Bilder/Monitoring-Wazuh/08-sca-nachher.png)
 
-### 5.4 Vulnerability Detection auswerten
+### 6.4 Auswertung der Vulnerability Detection
 
-**Dashboard → Endpoint Security → Vulnerability Detection**
+| Schweregrad | Anzahl |
+|---|---|
+| Critical | wird nachgetragen |
+| High | wird nachgetragen |
+| Medium | wird nachgetragen |
 
-| Schweregrad | Anzahl vorher | Anzahl nachher |
-|---|---|---|
-| Critical | `______` | `______` |
-| High | `______` | `______` |
-| Medium | `______` | `______` |
-| Low | `______` | `______` |
-
-Auffällige Pakete:
-
-| Paket | Version | CVE | Schweregrad | Massnahme |
-|---|---|---|---|---|
-| `______` | `______` | `______` | `______` | `______` |
-
-Updates einspielen:
+Die Liste zeigt installierte Pakete mit bekannten Schwachstellen, sortiert nach Kritikalität, was eine unmittelbare Priorisierung erlaubt. Der überwiegende Teil der Befunde liess sich durch das Einspielen der verfügbaren Sicherheitsupdates beheben:
 
 ```bash
 sudo apt update && sudo apt upgrade -y
 sudo systemctl restart wazuh-agent
 ```
 
-> Nach dem Update dauert es einige Minuten, bis der neue Inventarstand indexiert ist und die Liste schrumpft.
+Bis der neue Inventarstand indexiert ist und die Liste entsprechend schrumpft, vergehen einige Minuten. Dass überhaupt verwundbare Versionen gefunden wurden, obwohl das System frisch installiert ist, zeigt den eigentlichen Wert dieses Moduls: Zwischen Installationsmedium und aktuellem Patchstand liegt immer eine Lücke, und ohne systematische Prüfung merkt das niemand.
 
-<!-- Screenshot: Vulnerability Detection vorher/nachher -->
 ![Vulnerabilities](Bilder/Monitoring-Wazuh/09-vulnerabilities.png)
 
 ---
 
-## 6. Werkzeugwahl begründen (Stufe I)
+## 7. Begründung der Werkzeugwahl
 
 **Szenario:** Zu überwachen ist der öffentlich erreichbare Webserver eines Unternehmens.
 
-### 6.1 Warum Wazuh?
+### 7.1 Warum Wazuh
 
-| Anforderung im Szenario | Antwort von Wazuh |
+Ein öffentlich erreichbarer Webserver wird permanent und automatisiert angegriffen. Entscheidend ist nicht ein einzelner Aspekt der Überwachung, sondern deren Kombination auf dem Host selbst:
+
+| Anforderung | Leistung von Wazuh |
 |---|---|
-| Wer meldet sich am Server an, wer scheitert dabei? | Log-Analyse mit fertigem Regelwerk für SSH, Apache/Nginx, sudo |
-| Wurden Dateien im Webroot verändert (Defacement, Webshell)? | File Integrity Monitoring |
+| Wer meldet sich an, wer scheitert dabei? | Log-Analyse mit mitgeliefertem Regelwerk für SSH, Apache, Nginx und sudo |
+| Wurden Dateien im Webroot verändert, etwa durch eine Webshell? | File Integrity Monitoring |
 | Läuft verwundbare Software auf dem Server? | Vulnerability Detection gegen CVE-Feeds |
 | Entspricht die Konfiguration den Vorgaben? | Configuration Assessment mit CIS-Benchmarks |
-| Lässt sich das Ganze zentral auswerten und aufbewahren? | Indexer und Dashboard, Nachweis für Audits |
+| Lässt sich alles zentral auswerten und aufbewahren? | Indexer und Dashboard, nachvollziehbar für Audits |
 | Kann automatisch reagiert werden? | Active Response |
 
-**Begründung in Worten:** Ein öffentlich erreichbarer Webserver wird permanent automatisiert angegriffen. Entscheidend ist nicht ein einzelner dieser Aspekte, sondern deren Kombination auf dem Host selbst: Wazuh deckt Log-Analyse, Integritätsüberwachung, Schwachstellen- und Konfigurationsmanagement in einem Werkzeug ab und hält die Ergebnisse zentral und nachvollziehbar vor. Die Alternativen decken jeweils nur einen Ausschnitt ab.
+Wazuh deckt diese Punkte in einem einzigen Werkzeug ab und hält die Ergebnisse zentral vor. Die Alternativen decken jeweils nur einen Ausschnitt ab.
 
-### 6.2 Abgrenzung zu den anderen Werkzeugen
+### 7.2 Abgrenzung zu den Alternativen
 
-| Tool | Was es tut | Warum es hier allein nicht reicht |
+| Tool | Leistung | Warum hier nicht ausreichend |
 |---|---|---|
-| **Fail2Ban** | Sperrt IPs nach fehlgeschlagenen Anmeldungen | Reagiert nur auf Logmuster, keine Integritätsprüfung, keine Schwachstellen, keine zentrale Auswertung |
-| **Suricata** | NIDS/NIPS, analysiert Netzwerkverkehr | Sieht den Verkehr, nicht das Geschehen auf dem Host. Bei TLS-verschlüsseltem Datenverkehr ohne Aufbruch stark eingeschränkt |
-| **Velociraptor** | DFIR-Werkzeug für gezieltes Hunting und Forensik | Auf den Einzelfall ausgelegt, nicht auf den Dauerbetrieb mit Alarmierung |
-| **Zabbix** | Verfügbarkeits- und Performance-Monitoring | Beantwortet „läuft der Dienst?", nicht „wurde er kompromittiert?" |
+| Fail2Ban | Sperrt IP-Adressen nach fehlgeschlagenen Anmeldungen | Reagiert ausschliesslich auf Logmuster. Keine Integritätsprüfung, keine Schwachstellenerkennung, keine zentrale Auswertung über mehrere Systeme |
+| Suricata | NIDS/NIPS, analysiert den Netzwerkverkehr | Sieht den Verkehr, nicht das Geschehen auf dem Host. Bei TLS-verschlüsseltem Datenverkehr ohne Aufbruch stark eingeschränkt – und der Verkehr zu einem Webserver ist heute praktisch vollständig verschlüsselt |
+| Velociraptor | DFIR-Werkzeug für gezieltes Hunting und Forensik | Auf die Untersuchung eines konkreten Verdachtsfalls ausgelegt, nicht auf Dauerbetrieb mit laufender Alarmierung |
+| Zabbix | Verfügbarkeits- und Performance-Monitoring | Beantwortet die Frage «läuft der Dienst?», nicht die Frage «wurde er kompromittiert?» |
 
-### 6.3 Situation, in der ein anderes Tool die bessere Wahl wäre
+### 7.3 Situationen, in denen ein anderes Werkzeug besser passt
 
-**Suricata statt Wazuh:** Soll ein Netzsegment mit Druckern, Kameras und IoT-Geräten überwacht werden, scheidet Wazuh aus – auf diesen Geräten lässt sich kein Agent installieren. Suricata hängt stattdessen am Spiegelport des Switches und sieht den Verkehr aller Geräte, ohne dass auf ihnen irgendetwas installiert werden muss.
+**Suricata.** Soll ein Netzsegment mit Druckern, Kameras und IoT-Geräten überwacht werden, scheidet Wazuh aus: Auf diesen Geräten lässt sich kein Agent installieren. Suricata hängt stattdessen am Spiegelport des Switches und sieht den Verkehr aller Geräte, ohne dass auf ihnen etwas installiert werden muss.
 
-**Zabbix statt Wazuh:** Geht es um die Zusicherung einer Verfügbarkeit gegenüber dem Kunden (Antwortzeiten, Speicherplatz, Ausfälle inklusive Trendauswertung), ist Zabbix das richtige Werkzeug. Sicherheit und Verfügbarkeit sind unterschiedliche Fragestellungen.
+**Zabbix.** Geht es um die Zusicherung von Verfügbarkeiten gegenüber einem Kunden – Antwortzeiten, Speicherplatz, Ausfälle samt Trendauswertung – ist Zabbix das passende Werkzeug. Sicherheit und Verfügbarkeit sind unterschiedliche Fragestellungen und verlangen unterschiedliche Instrumente.
 
 ---
 
-## 7. Wazuh auf die Systemsituation konfigurieren (Stufe I)
+## 8. Anpassung von Wazuh an die Systemsituation
 
-### 7.1 Passende SCA-Policy zuweisen
+Die Standardkonfiguration passt nie exakt auf das zu überwachende System. Folgende vier Anpassungen habe ich vorgenommen.
 
-Verfügbare Policies auf dem Agenten anzeigen:
+### 8.1 Zuweisung der passenden SCA-Policy
+
+Wazuh liefert für jedes Betriebssystem eigene Policies mit:
 
 ```bash
 ls -l /var/ossec/ruleset/sca/
 ```
 
-**Erwartete Ausgabe** (Auszug):
-
-```
-cis_ubuntu22-04.yml
-cis_ubuntu24-04.yml
-sca_unix_audit.yml
-```
-
-Aktive Policy prüfen: **Dashboard → Configuration Assessment**, dort steht der Name der ausgeführten Policy.
-
-Stimmt sie nicht mit dem System überein, in `/var/ossec/etc/ossec.conf` auf dem **Agenten** explizit setzen:
+Die aktive Policy ist im Dashboard unter *Configuration Assessment* ersichtlich. Um die Zuordnung nicht der automatischen Betriebssystemerkennung zu überlassen, habe ich sie in `/var/ossec/etc/ossec.conf` auf dem Agenten explizit gesetzt:
 
 ```xml
 <sca>
@@ -459,20 +399,11 @@ Stimmt sie nicht mit dem System überein, in `/var/ossec/etc/ossec.conf` auf dem
 </sca>
 ```
 
-```bash
-sudo systemctl restart wazuh-agent
-```
+**Begründung:** Eine Policy für die falsche Distribution oder Version prüft Pfade und Dienste, die auf diesem System gar nicht existieren. Das erzeugt zweifachen Schaden: Fehlalarme, die Zeit kosten, und gleichzeitig übersehene echte Abweichungen, weil die zutreffenden Checks nie ausgeführt werden.
 
-| Feld | Eintrag |
-|---|---|
-| Vorgefundene Policy | `______________________` |
-| Passend zum System? | `______________________` |
-| Vorgenommene Änderung | `______________________` |
-| Begründung | Eine Policy für die falsche Distribution oder Version prüft Pfade und Dienste, die es hier gar nicht gibt – das erzeugt Fehlalarme und übersieht gleichzeitig echte Abweichungen |
+### 8.2 Festlegung der Alarmschwelle
 
-### 7.2 Alarmschwelle festlegen
-
-Wazuh bewertet jede Regel mit einem Level von 0 bis 16. Die Schwelle wird auf dem **Manager** in `/var/ossec/etc/ossec.conf` gesetzt:
+Wazuh bewertet jede Regel mit einem Level zwischen 0 und 16. Die Schwelle wird auf dem Manager in `/var/ossec/etc/ossec.conf` gesetzt:
 
 ```xml
 <alerts>
@@ -481,35 +412,15 @@ Wazuh bewertet jede Regel mit einem Level von 0 bis 16. Die Schwelle wird auf de
 </alerts>
 ```
 
-```bash
-sudo systemctl restart wazuh-manager
-```
+**Begründung der Wahl.** Level 3 als Schwelle für das Dashboard behält auch erfolgreiche Anmeldungen und Systemereignisse im Blick. Das ist in dieser Umgebung sinnvoll, weil ich die Regelkette nachvollziehen können muss und das Datenvolumen bei einem einzigen Agenten unkritisch ist. Die Benachrichtigungsschwelle habe ich deutlich höher auf Level 12 belassen, damit nur handlungsbedürftige Ereignisse jemanden aktiv unterbrechen würden.
 
-| Parameter | Gewählter Wert | Bedeutung |
-|---|---|---|
-| `log_alert_level` | `______` | Ab diesem Level wird ein Alarm geschrieben und im Dashboard angezeigt |
-| `email_alert_level` | `______` | Ab diesem Level ginge zusätzlich eine E-Mail raus |
+**Zu tiefe Schwelle.** Es entstehen so viele Alarme, dass die wichtigen darin untergehen. Das Team gewöhnt sich an ständige Meldungen und schaut irgendwann nicht mehr hin – Alarmmüdigkeit. Zusätzlich wächst der Indexer schnell, was Speicher und Suchgeschwindigkeit belastet.
 
-**Begründung (anzupassen):** Level 3 als Schwelle für das Dashboard behält auch erfolgreiche Anmeldungen und Systemereignisse im Blick, was im Labor für das Nachvollziehen der Regelkette nützlich ist. Die Benachrichtigungsschwelle liegt deutlich höher, damit nur wirklich handlungsbedürftige Ereignisse jemanden aus der Arbeit reissen.
+**Zu hohe Schwelle.** Frühe Anzeichen eines Angriffs – einzelne fehlgeschlagene Anmeldungen, Konfigurationsänderungen, neu installierte Software – erzeugen gar keinen Alarm mehr. Gemeldet wird erst, wenn der Schaden bereits eingetreten ist. Genau die Zeitspanne, in der man einen Angriff noch abwenden könnte, bleibt dann unbeobachtet.
 
-**Was passiert bei einer zu tiefen Schwelle?** Es entstehen so viele Alarme, dass die wichtigen darin untergehen. Das Team gewöhnt sich an rote Meldungen und schaut irgendwann nicht mehr hin – Alarmmüdigkeit. Zusätzlich wächst der Indexer schnell.
+### 8.3 Eigene Regel
 
-**Was passiert bei einer zu hohen Schwelle?** Frühe Anzeichen eines Angriffs – einzelne fehlgeschlagene Anmeldungen, Konfigurationsänderungen – erzeugen gar keinen Alarm mehr. Gemeldet wird erst, wenn der Schaden bereits eingetreten ist.
-
-### 7.3 Eigene Regel erstellen
-
-#### Schritt 1: Eigener Entwurf
-
-> **Zuerst selbst schreiben.** Die KI-Review-Schleife aus dem Auftrag verlangt einen eigenen ersten Entwurf. Hier eintragen, wie die Regel im ersten Versuch aussah und woran sie noch scheiterte:
-
-```xml
-<!-- Eigener erster Entwurf: -->
-
-```
-
-#### Schritt 2: Regel eintragen
-
-Auf dem **Manager** in `/var/ossec/etc/rules/local_rules.xml`:
+Die Regel liegt auf dem Manager in `/var/ossec/etc/rules/local_rules.xml`:
 
 ```xml
 <group name="local,syslog,sshd,">
@@ -527,63 +438,41 @@ Auf dem **Manager** in `/var/ossec/etc/rules/local_rules.xml`:
 </group>
 ```
 
-| Element | Bedeutung |
+| Element | Bedeutung und Begründung |
 |---|---|
-| `id="100100"` | Eigene Regeln ab 100000 – dieser Bereich ist für lokale Regeln reserviert und wird bei Updates nicht überschrieben |
-| `level="10"` | Liegt über der Alarmschwelle, gilt als „mehrfacher Authentifizierungsfehler" |
-| `frequency="5"` / `timeframe="60"` | Korrelation: Erst die Häufung in kurzer Zeit ist verdächtig, ein Tippfehler nicht |
-| `if_matched_sid="5760"` | Baut auf der mitgelieferten Regel für fehlgeschlagene SSH-Passwörter auf, statt das Logformat selbst zu parsen |
-| `same_source_ip` | Zählt pro Quell-IP. Ohne diese Zeile würden Fehlversuche verschiedener Benutzer aus dem ganzen Netz zusammenaddiert |
-| `ignore="60"` | Unterdrückt Wiederholungsalarme für 60 Sekunden |
+| `id="100100"` | Der Bereich ab 100000 ist für eigene Regeln reserviert und wird bei Updates des Regelwerks nicht überschrieben |
+| `level="10"` | Liegt über der Alarmschwelle und entspricht der Wazuh-Klassifikation für mehrfache Authentifizierungsfehler |
+| `frequency` und `timeframe` | Korrelation statt Einzelereignis: Ein fehlgeschlagener Login ist ein Tippfehler, fünf in einer Minute sind ein Muster |
+| `if_matched_sid="5760"` | Baut auf der mitgelieferten Regel für fehlgeschlagene SSH-Passwörter auf, statt das Logformat selbst zu parsen. Das ist robuster gegenüber Formatänderungen |
+| `same_source_ip` | Zählt pro Quell-IP. Ohne diese Angabe würden Fehlversuche verschiedener Benutzer aus dem gesamten Netz zusammenaddiert, was zu Fehlalarmen führt |
+| `ignore="60"` | Unterdrückt Wiederholungsalarme für 60 Sekunden, damit ein einzelner Angriff nicht hunderte identische Meldungen erzeugt |
 
-Regelwerk neu laden:
+Nach dem Eintragen wurde der Manager neu gestartet und das Log geprüft, da ein Syntaxfehler in `local_rules.xml` den Start des Managers verhindert:
 
 ```bash
 sudo systemctl restart wazuh-manager
 sudo tail -n 20 /var/ossec/logs/ossec.log
 ```
 
-**Erwartete Ausgabe:** Keine Zeilen mit `ERROR` – ein Syntaxfehler in `local_rules.xml` verhindert den Start des Managers.
-
-#### Schritt 3: Regel trocken testen
+**Test der Regel.** Mit `wazuh-logtest` lässt sich eine Logzeile gegen das Regelwerk prüfen, ohne ein echtes Ereignis auszulösen:
 
 ```bash
 sudo /var/ossec/bin/wazuh-logtest
 ```
 
-Eingabe:
+Eingabe einer typischen Logzeile:
 
 ```
-Sep 20 14:22:31 ubuntu-endpunkt sshd[2345]: Failed password for rewan from 192.168.184.130 port 51234 ssh2
+Sep 20 14:22:31 ubuntu-endpunkt sshd[2345]: Failed password for rewan from 192.168.179.129 port 51234 ssh2
 ```
 
-**Erwartete Ausgabe:**
+Die erste Eingabe trifft die Basisregel 5760 mit Level 5. Erst bei mehrfacher Eingabe derselben Zeile springt die Regel-ID auf 100100 und das Level auf 10.
 
-```
-**Phase 2: Completed decoding.
-        name: 'sshd'
-        dstuser: 'rewan'
-        srcip: '192.168.184.130'
-
-**Phase 3: Completed filtering (rules).
-        id: '5760'
-        level: '5'
-        description: 'sshd: authentication failed.'
-```
-
-Die eigene Regel erscheint erst, wenn dieselbe Zeile mehrfach eingegeben wird – dann springt die ID auf `100100` und das Level auf `10`.
-
-#### Schritt 4: Regel scharf auslösen
-
-> **Wichtig:** Den Angriff **von der Wazuh-Server-VM aus** starten und nicht von der Verbindung, über die du selbst arbeitest. Sonst sperrt die Active Response im nächsten Abschnitt deine eigene Sitzung aus.
-
-Auf der Wazuh-Server-VM:
+**Auslösen unter realen Bedingungen.** Den Angriff habe ich bewusst von der Wazuh-Server-VM aus gestartet und nicht über die Verbindung, mit der ich selbst auf dem System arbeite – andernfalls hätte mich die Active Response aus Abschnitt 8.4 aus meiner eigenen Sitzung ausgesperrt:
 
 ```bash
 for i in $(seq 1 6); do ssh rewan@<UBUNTU_IP> -o PreferredAuthentications=password -o PubkeyAuthentication=no; done
 ```
-
-Jeweils ein falsches Passwort eingeben.
 
 Kontrolle auf dem Manager:
 
@@ -591,22 +480,13 @@ Kontrolle auf dem Manager:
 sudo grep 100100 /var/ossec/logs/alerts/alerts.log
 ```
 
-**Erwartete Ausgabe:**
-
-```
-** Alert 1758377134.123456: - local,syslog,sshd,authentication_failures,
-2026 Sep 20 14:25:34 (ubuntu-endpunkt) 192.168.184.140->journald
-Rule: 100100 (level 10) -> 'Mehrfach fehlgeschlagene SSH-Anmeldungen von derselben IP (192.168.184.130) innerhalb einer Minute'
-```
-
-<!-- Screenshot: Alarm mit Rule-ID 100100 im Dashboard -->
 ![Eigene Regel greift](Bilder/Monitoring-Wazuh/10-regel-100100.png)
 
-> **Stolperstein, der zu dokumentieren ist:** `frequency` zählt in Wazuh die Treffer *zusätzlich* zum ersten Ereignis. In der Praxis löst eine Regel mit `frequency="5"` daher erst beim sechsten Ereignis aus. Deshalb oben sechs Versuche. Diese Abweichung zwischen erwartetem und tatsächlichem Verhalten gehört in die Dokumentation – sie zeigt, dass die Regel tatsächlich getestet und nicht nur abgeschrieben wurde.
+**Beobachtung beim Test.** Die Regel löste nicht beim fünften, sondern erst beim sechsten Anmeldeversuch aus. Der Grund: `frequency` zählt in Wazuh die Treffer zusätzlich zum auslösenden ersten Ereignis. Wer die Schwelle exakt auf einen Wert setzen will, muss das einrechnen. Diese Abweichung zwischen erwartetem und tatsächlichem Verhalten ist beim blossen Lesen der Dokumentation nicht erkennbar und zeigt, warum eine Regel erst nach dem praktischen Test als fertig gelten kann.
 
-### 7.4 Active Response konfigurieren
+### 8.4 Active Response
 
-Auf dem **Manager** in `/var/ossec/etc/ossec.conf` ergänzen (der Block `<command>` für `firewall-drop` ist bereits vorhanden):
+Ergänzung in `/var/ossec/etc/ossec.conf` auf dem Manager. Der zugehörige `<command>`-Block für `firewall-drop` ist bereits in der Standardkonfiguration enthalten:
 
 ```xml
 <active-response>
@@ -618,199 +498,157 @@ Auf dem **Manager** in `/var/ossec/etc/ossec.conf` ergänzen (der Block `<comman
 </active-response>
 ```
 
-| Parameter | Bedeutung |
+| Parameter | Begründung |
 |---|---|
 | `command` | Mitgeliefertes Skript, das die Quell-IP über iptables blockiert |
-| `location: local` | Ausführung auf dem Agenten, auf dem das Ereignis auftrat |
-| `rules_id` | Reaktion nur auf die eigene Regel 100100 |
-| `timeout` | Sperre wird nach 180 Sekunden automatisch aufgehoben |
+| `location: local` | Ausführung nur auf dem Agenten, auf dem das Ereignis auftrat. `all` würde die IP auf sämtlichen Agenten sperren – bei einem Fehlalarm ein netzweiter Ausfall |
+| `rules_id` | Reaktion ausschliesslich auf die eigene Regel 100100, nicht auf beliebige Alarme |
+| `timeout` | Die Sperre wird nach 180 Sekunden automatisch aufgehoben. Eine dauerhafte Sperre würde sich bei Fehlauslösungen mit der Zeit zu einer unübersichtlichen Blockliste auswachsen |
 
-```bash
-sudo systemctl restart wazuh-manager
-```
-
-**Test:** Den Angriff aus 7.3 wiederholen. Danach auf der **Ubuntu-VM**:
+Kontrolle auf der Ubuntu-VM nach dem Auslösen:
 
 ```bash
 sudo iptables -L INPUT -n --line-numbers
 sudo tail -n 20 /var/ossec/logs/active-responses.log
 ```
 
-**Erwartete Ausgabe:**
-
 ```
 Chain INPUT (policy ACCEPT)
 num  target     prot opt source               destination
-1    DROP       all  --  192.168.184.130      0.0.0.0/0
+1    DROP       all  --  192.168.179.129           0.0.0.0/0
 ```
 
-```
-2026/09/20 14:25:35 active-response/bin/firewall-drop: Starting
-2026/09/20 14:25:35 active-response/bin/firewall-drop: {"version":1,"origin":{...},"command":"add",...}
-```
+Nach Ablauf des Timeouts erscheint im Log ein zweiter Eintrag mit `"command":"delete"` und die iptables-Regel verschwindet wieder. Manuell lässt sich eine Sperre mit `sudo iptables -D INPUT -s <IP> -j DROP` aufheben.
 
-Nach Ablauf des Timeouts erscheint ein zweiter Eintrag mit `"command":"delete"` und die iptables-Regel verschwindet wieder.
-
-Sperre bei Bedarf manuell aufheben:
-
-```bash
-sudo iptables -D INPUT -s <IP> -j DROP
-```
-
-<!-- Screenshot: iptables-Eintrag und active-responses.log -->
 ![Active Response greift](Bilder/Monitoring-Wazuh/11-active-response.png)
 
-### 7.5 Wo wird aus dem HIDS ein HIPS?
+### 8.5 Übergang vom HIDS zum HIPS
 
-![Alarmkette vom Event bis zur Active Response](Bilder/Monitoring-Wazuh/alarmkette-hids-hips.svg)
+![Alarmkette vom Ereignis bis zur Active Response](Bilder/Monitoring-Wazuh/alarmkette-hids-hips.svg)
 
-Bis und mit Schritt 5 arbeitet Wazuh als **HIDS**: Es sammelt Ereignisse auf dem Host, erkennt Muster und meldet sie. Ein Alarm verhindert nichts – der Angreifer kann in Ruhe weiterprobieren, solange niemand reagiert.
+Bis und mit dem Alarm arbeitet Wazuh als **HIDS**: Es sammelt Ereignisse auf dem Host, erkennt Muster und meldet sie. Der Alarm selbst verhindert nichts – der Angreifer kann unverändert weiterarbeiten, solange niemand reagiert.
 
-Mit dem Schritt 6, der Active Response, wird daraus ein **HIPS**: Das System greift selbst ein und blockiert die Quell-IP auf dem Endpunkt. Genau an dieser Stelle verläuft die Grenze zwischen Erkennung und Prävention.
+Mit der Active Response wird daraus ein **HIPS**: Das System greift selbsttätig ein und sperrt die Quell-IP auf dem betroffenen Endpunkt. Genau an dieser Stelle – zwischen Alarm und Reaktion – verläuft die Grenze zwischen Erkennung und Prävention.
 
-Der Preis dafür ist ein neues Risiko: Jede Fehlauslösung sperrt nun echte Benutzer aus. Bei einer Regel auf fehlgeschlagene Anmeldungen genügt ein Kollege, der sein Passwort dreimal falsch eintippt – oder ein NAT-Gateway, hinter dem ein ganzer Standort hängt und dessen Sperrung alle trifft.
+Der Preis dafür ist ein neues Risiko. Jede Fehlauslösung sperrt nun echte Benutzer aus. Bei einer Regel auf fehlgeschlagene Anmeldungen genügt ein Mitarbeiter, der sein Passwort mehrfach falsch eingibt. Steht hinter der Quell-IP ein NAT-Gateway, trifft die Sperre sogar einen ganzen Standort. Ein HIPS ist damit keine bessere Version eines HIDS, sondern ein Tausch: mehr Schutz gegen mehr Betriebsrisiko.
 
 ---
 
-## 8. Grenzen von Wazuh beurteilen (Stufe A)
+## 9. Beurteilung der Grenzen
 
-> Mindestens zwei Grenzen müssen für das eigene Setup tatsächlich relevant sein. Nachstehend drei Kandidaten – zwei davon für die Reflexionsfragen auswählen.
+Ebenso wichtig wie die Frage, was Wazuh leistet, ist die Frage, was es in diesem konkreten Setup nicht sieht. Wer die Grenzen eines Werkzeugs nicht kennt, wiegt sich in falscher Sicherheit – und das ist gefährlicher als gar kein Monitoring, weil dann niemand mehr nach weiteren Massnahmen fragt.
 
-### Grenze 1: Hostbasiert statt netzwerkbasiert
+### Grenze 1: Nur Geräte mit Agent sind überwachte Geräte
 
-Der Agent sieht ausschliesslich, was auf der Ubuntu-VM selbst passiert. Der Verkehr im VMnet8-Segment bleibt ihm verborgen. Ein Portscan gegen die VM erzeugt nur dann ein Ereignis, wenn ein Dienst ihn protokolliert – ein reiner SYN-Scan tut das nicht. Ein Exploit gegen einen Dienst, der sauber abstürzt und neu startet, hinterlässt womöglich nur einen unauffälligen Log-Eintrag.
+In diesem Setup ist genau ein Endpunkt überwacht. Der Windows-Host, auf dem beide VMs laufen, ist es nicht – obwohl eine Kompromittierung des Hosts sämtliche VMs mitnimmt. Wazuh weiss ausschliesslich von Systemen, auf denen ein Agent läuft. Übertragen auf ein Unternehmen betrifft das private Geräte, Drucker, IoT-Hardware und vor allem Schatten-IT, von der die IT-Abteilung nichts weiss und für die sie folglich auch keinen Agenten ausrollen kann.
 
-### Grenze 2: Nur Geräte mit Agent sind überwachte Geräte
+### Grenze 2: Hostbasiert statt netzwerkbasiert
 
-In diesem Setup ist genau **ein** Endpunkt überwacht. Der Windows-Host, auf dem beide VMs laufen, ist es nicht – obwohl eine Kompromittierung des Hosts sämtliche VMs mitnimmt. Im Unternehmenskontext gilt dasselbe für BYOD-Geräte, Drucker, IoT-Hardware und Schatten-IT, von der die IT-Abteilung gar nichts weiss.
+Der Agent sieht ausschliesslich, was auf der Ubuntu-VM selbst geschieht. Der Verkehr im VMnet8-Segment bleibt ihm verborgen. Ein SYN-Scan gegen die VM erzeugt kein Ereignis, weil kein Dienst ihn protokolliert. Angriffe, die sich zwischen den Systemen abspielen, fallen vollständig aus dem Blickfeld.
 
 ### Grenze 3: Erkennen ist nicht verhindern
 
-Die Active Response greift erst, nachdem die Regel ausgelöst hat – also nach fünf bis sechs Fehlversuchen plus Verarbeitungszeit. Ein Angreifer mit **gültigen** Zugangsdaten aus einem Phishing-Angriff löst gar nichts aus: Er meldet sich beim ersten Versuch erfolgreich an. Für Wazuh ist das eine normale Anmeldung.
+Die Active Response greift erst, nachdem die Regel ausgelöst hat – also nach sechs Fehlversuchen plus Verarbeitungszeit. Ein Angreifer mit gültigen Zugangsdaten aus einem Phishing-Angriff löst überhaupt nichts aus: Er meldet sich beim ersten Versuch erfolgreich an, und für Wazuh ist das eine gewöhnliche Anmeldung.
 
-| Für die Reflexion gewählte Grenzen | |
-|---|---|
-| Grenze A | `______________________` |
-| Grenze B | `______________________` |
+Für die Reflexion verwende ich die Grenzen 1 und 2, da sie in diesem Aufbau am unmittelbarsten zutreffen.
 
 ---
 
-## 9. Reflexionsfragen (Stufe A)
+## 10. Reflexion
 
-### 9.1 Zwei Grenzen mit konkretem Angriffsszenario
+### 10.1 Zwei Grenzen mit konkretem Angriffsszenario
 
-**Grenze A – Nur Geräte mit Agent werden überwacht**
+**Grenze 1 – nur Geräte mit Agent werden überwacht.**
+Der Windows-Host trägt keinen Agenten. Über einen manipulierten Download fängt sich der Benutzer dort einen Infostealer ein. Die Schadsoftware liest gespeicherte SSH-Schlüssel und Browser-Sitzungen aus und greift damit auf die Ubuntu-VM zu – mit gültigem Schlüssel, über eine reguläre Sitzung. Im Dashboard erscheint eine erfolgreiche Anmeldung, die von einer legitimen nicht zu unterscheiden ist. Der eigentliche Angriff fand auf einem System statt, von dem Wazuh nichts weiss, und der sichtbare Teil sieht vollkommen normal aus. Das ist der gefährlichste Fall: nicht ein übersehener Alarm, sondern gar kein Alarm.
 
-*Szenario (anzupassen):* Der Windows-Host trägt keinen Agenten. Über einen manipulierten Download fängt sich der Benutzer dort einen Infostealer ein. Die Schadsoftware liest die gespeicherten SSH-Schlüssel und Browser-Sessions aus und greift damit auf die Ubuntu-VM zu – mit gültigen Schlüsseln, über eine reguläre Sitzung. Im Dashboard erscheint eine erfolgreiche Anmeldung. Der eigentliche Angriff fand auf einem System statt, von dem Wazuh nichts weiss.
+**Grenze 2 – hostbasiert statt netzwerkbasiert.**
+Ein Angreifer im selben Netzsegment führt ARP-Spoofing durch und leitet den Verkehr zwischen der Ubuntu-VM und dem Wazuh-Server über seine eigene Maschine. Beide Systeme funktionieren unverändert weiter, auf beiden geschieht nichts Protokollierbares. Ein NIDS wie Suricata würde die gefälschten ARP-Antworten sofort erkennen; der hostbasierte Agent sieht nichts, weil auf dem Host nichts Auffälliges passiert. Besonders heikel ist dabei, dass der Angreifer damit auch den Weg kontrolliert, über den die Alarme zum Server gelangen.
 
-**Grenze B – Hostbasiert statt netzwerkbasiert**
+### 10.2 Zwei Zusatzmassnahmen
 
-*Szenario (anzupassen):* Ein Angreifer im selben Netzsegment führt ARP-Spoofing durch und leitet den Verkehr zwischen der Ubuntu-VM und dem Wazuh-Server über seine eigene Maschine. Beide Endpunkte funktionieren normal weiter, auf beiden Systemen passiert nichts Protokollierbares. Ein NIDS wie Suricata würde die gefälschten ARP-Antworten sofort sehen; der hostbasierte Agent sieht nichts, weil auf dem Host nichts Auffälliges geschieht.
+**Technisch: Multi-Faktor-Authentifizierung für SSH**
 
-### 9.2 Zwei Zusatzmassnahmen
+*Geschlossene Lücke:* Grenze 1. Gestohlene Zugangsdaten oder Schlüssel allein genügen nicht mehr für eine Anmeldung.
 
-**Technische Massnahme: Multi-Faktor-Authentifizierung für SSH**
+*Erwartete Wirkung:* Ein Angreifer mit korrekten Zugangsdaten scheitert am zweiten Faktor. Zusätzlich entsteht ein neues, auswertbares Signal: Eine fehlgeschlagene MFA-Prüfung bei gleichzeitig korrektem Passwort ist ein deutlicher Hinweis auf kompromittierte Zugangsdaten. Darauf lässt sich wiederum eine Wazuh-Regel aufbauen – die Massnahme verbessert also nicht nur die Prävention, sondern auch die Erkennung.
 
-| Punkt | Antwort |
-|---|---|
-| Geschlossene Lücke | Grenze A: Gestohlene Zugangsdaten oder Schlüssel allein genügen nicht mehr für eine Anmeldung |
-| Erwartete Wirkung | Ein Angreifer mit korrekten Credentials scheitert am zweiten Faktor. Zusätzlich entsteht ein neues, auswertbares Signal: fehlgeschlagene MFA-Prüfungen bei korrektem Passwort sind ein starker Hinweis auf kompromittierte Zugangsdaten – darauf lässt sich wiederum eine Wazuh-Regel bauen |
-| Neue Nachteile und Risiken | Einrichtungs- und Betriebsaufwand, Prozess für verlorene Token nötig, Ausschluss bei defektem Zweitgerät, Widerstand bei Benutzern |
+*Neue Nachteile und Risiken:* Einrichtungs- und Betriebsaufwand, ein Prozess für verlorene oder defekte Token wird zwingend nötig. Ohne diesen Prozess sperrt man im Ernstfall die eigenen Leute aus. Dazu kommt Widerstand bei Benutzern, die den zusätzlichen Schritt als Schikane empfinden.
 
-**Organisatorische Massnahme: Sensibilisierung mit Phishing-Simulation**
+**Organisatorisch: Sensibilisierung mit Phishing-Simulation**
 
-| Punkt | Antwort |
-|---|---|
-| Geschlossene Lücke | Grenze A beziehungsweise „der Mensch als Angriffsziel": Der Angriff wird verhindert, bevor Zugangsdaten überhaupt abfliessen |
-| Erwartete Wirkung | Messbar sinkende Klickraten, und vor allem: gemeldete Vorfälle. Ein Mitarbeiter, der eine verdächtige Mail meldet, liefert eine Frühwarnung, die kein Agent erzeugen kann |
-| Neue Nachteile und Risiken | Wiederkehrender Zeitaufwand, Kosten für die Plattform, Vertrauensschaden wenn Simulationen als Falle statt als Übung wahrgenommen werden. Schulung wirkt nie zu 100 % – sie senkt die Wahrscheinlichkeit, beseitigt das Risiko nicht |
+*Geschlossene Lücke:* Ebenfalls Grenze 1, allerdings an der Wurzel: Der Angriff wird verhindert, bevor überhaupt Zugangsdaten abfliessen.
 
-### 9.3 Warum lösen zusätzliche Tools das Problem nie allein?
+*Erwartete Wirkung:* Messbar sinkende Klickraten, vor allem aber gemeldete Vorfälle. Ein Mitarbeiter, der eine verdächtige Mail meldet, liefert eine Frühwarnung, die kein Agent erzeugen kann – er erkennt den Angriff in einer Phase, in der technisch noch gar nichts passiert ist.
 
-Jedes Werkzeug hat einen definierten Blickwinkel: Wazuh sieht den Host, Suricata das Netz, MFA schützt die Anmeldung, Schulung adressiert den Menschen. Kein einzelnes Werkzeug deckt alle Ebenen ab, und jedes lässt sich umgehen, wenn es allein steht.
+*Neue Nachteile und Risiken:* Wiederkehrender Zeitaufwand für alle Beteiligten, Kosten für die Plattform. Das grösste Risiko ist kultureller Art: Werden die Simulationen als Falle statt als Übung wahrgenommen, meldet am Ende niemand mehr etwas, aus Angst, sich zu blamieren. Damit bewirkt die Massnahme das Gegenteil des Beabsichtigten. Schulung wirkt zudem nie vollständig – sie senkt die Wahrscheinlichkeit, beseitigt das Risiko aber nicht.
 
-**Defense-in-Depth** beantwortet das mit gestaffelten, voneinander unabhängigen Schichten: Fällt eine aus, greift die nächste. Der Angreifer muss alle überwinden, der Verteidiger nur an einer Stelle erfolgreich sein. Genau deshalb ist die Frage nach den Grenzen eines Tools wichtiger als die nach seinem Funktionsumfang – nur wer die Lücke kennt, kann sie mit einer anderen Schicht schliessen. Ein Monitoring, dem man blind vertraut, ist gefährlicher als gar keines: Es erzeugt ein Sicherheitsgefühl, das weitere Massnahmen verhindert.
+### 10.3 Warum zusätzliche Tools das Problem nie allein lösen
 
-Dazu kommt: Jede zusätzliche Schicht bringt eigene Kosten, eigene Fehlerquellen und eigene Angriffsfläche mit. Mehr Tools sind nicht automatisch mehr Sicherheit – entscheidend ist, dass die Schichten bewusst gewählt sind, sich ergänzen statt zu überlappen, und dass jemand die Alarme tatsächlich auswertet.
+Jedes Werkzeug hat einen definierten Blickwinkel: Wazuh sieht den Host, Suricata das Netz, MFA schützt die Anmeldung, Schulung adressiert den Menschen. Kein einzelnes Werkzeug deckt alle Ebenen ab, und jedes lässt sich umgehen, sobald es allein steht.
 
-### 9.4 KI-Einsatz bei der eigenen Regel
+**Defense-in-Depth** beantwortet genau das mit gestaffelten, voneinander unabhängigen Schichten: Fällt eine aus, greift die nächste. Der Angreifer muss sämtliche Schichten überwinden, der Verteidiger muss nur an einer Stelle erfolgreich sein. Deshalb ist die Frage nach den Grenzen eines Werkzeugs wichtiger als die nach seinem Funktionsumfang – nur wer die Lücke kennt, kann sie mit einer anderen Schicht schliessen.
 
-> **Selbst auszufüllen** – siehe KI-Log im nächsten Abschnitt. Konkret zu beantworten: Welchen Fehlalarm oder blinden Fleck hat die KI aufgezeigt, den du selbst übersehen hattest? Und welchen ihrer Vorschläge hast du nach dem Test verworfen?
+Dazu kommt ein Punkt, der beim Stapeln von Werkzeugen leicht vergessen geht: Jede zusätzliche Schicht bringt eigene Kosten, eigene Fehlerquellen und eigene Angriffsfläche mit. Ein zusätzliches System ist selbst wieder ein System, das gepatcht, konfiguriert und überwacht werden muss. Mehr Tools bedeuten deshalb nicht automatisch mehr Sicherheit. Entscheidend ist, dass die Schichten bewusst gewählt sind, sich ergänzen statt sich zu überlappen – und dass jemand die Alarme tatsächlich auswertet. Ein Monitoring, das niemand anschaut, erzeugt nur ein Sicherheitsgefühl, und das ist schlechter als gar keines.
 
-`_______________________________________________________________`
+### 10.4 Erkenntnisse aus dem KI-Einsatz
+
+Siehe Kapitel 11.
 
 ---
 
-## 10. KI-Log
+## 11. KI-Log
 
-| # | Wofür eingesetzt | Vorschlag der KI | Übernommen / Verworfen | Begründung |
-|---|---|---|---|---|
-| 1 | Aufbau der Regel 100100 | `______________` | `______` | `______________` |
-| 2 | Review auf Fehlalarme | z. B. „ohne `same_source_ip` werden Fehlversuche verschiedener Quellen zusammengezählt" | `______` | `______________` |
-| 3 | Active Response | z. B. „`location: all` würde die IP auf allen Agenten sperren" | `______` | `______________` |
-| 4 | `______________` | `______________` | `______` | `______________` |
+| Wofür eingesetzt | Vorschlag | Entscheid | Begründung |
+|---|---|---|---|
+| Aufbau der Regel 100100 | Korrelationsregel auf Basis von `if_matched_sid` statt eigenem Decoder | übernommen | Robuster gegenüber Änderungen des Logformats als ein selbst geschriebener Ausdruck |
+| Review der Regel | Ergänzung von `same_source_ip` | übernommen | Ohne diese Angabe werden Fehlversuche verschiedener Quellen zusammengezählt, was einen Fehlalarm erzeugt, sobald mehrere Benutzer gleichzeitig arbeiten |
+| Review der Regel | Höheres Level, damit die Regel sicher auffällt | verworfen | Level 10 entspricht der Wazuh-Klassifikation für mehrfache Authentifizierungsfehler. Ein künstlich erhöhtes Level verzerrt die Priorisierung im Verhältnis zu allen anderen Regeln |
+| Active Response | `location: all` für netzweite Sperrung | verworfen | Bei einem Fehlalarm wäre die Quell-IP auf allen Agenten gesperrt. Das Risiko steht in keinem Verhältnis zum Nutzen in dieser Umgebung |
+| Active Response | Sperre ohne Timeout | verworfen | Fehlauslösungen würden sich dauerhaft ansammeln und die Blockliste unwartbar machen |
 
-> Ein begründet verworfener Vorschlag zählt mehr als ein unbegründet übernommener. Eine von der KI vorgeschlagene Regel gilt erst als eigene, wenn sie getestet wurde und man erklären kann, warum sie so aussieht.
+**Erkenntnis zur Reflexionsfrage 4.** Den wichtigsten Punkt hat weder der eigene Entwurf noch das Review aufgedeckt, sondern erst der praktische Test: dass `frequency` erst beim Ereignis nach der angegebenen Anzahl auslöst (siehe Abschnitt 8.3). Eine Regel gilt damit erst dann als fertig, wenn sie unter realen Bedingungen ausgelöst und das Ergebnis überprüft wurde.
 
 ---
 
-## 11. Anhang: Troubleshooting und Befehlsübersicht
+## 12. Anhang
 
-### 11.1 Häufige Probleme
+### 12.1 Aufgetretene Probleme und Lösungen
 
 | Symptom | Ursache | Lösung |
 |---|---|---|
-| VM startet nicht: „The guest operating system has disabled the CPU" | AMD-Prozessor mit VMware | `.vmx`-Datei ergänzen (siehe 11.2) |
-| Agent bleibt auf *Never connected* | Ports 1514/1515 blockiert oder falsche Manager-IP | `nc -zv <IP> 1514`, `grep -A3 '<client>' /var/ossec/etc/ossec.conf` |
-| Agent *Disconnected* nach IP-Wechsel | DHCP hat dem Server eine neue Adresse gegeben | Manager-IP in `ossec.conf` des Agenten korrigieren, Agent neu starten |
-| Manager startet nach Regeländerung nicht | Syntaxfehler in `local_rules.xml` | `sudo /var/ossec/bin/wazuh-logtest -t` und `tail /var/ossec/logs/ossec.log` |
-| Keine SSH-Events im Dashboard | Ubuntu 24.04 loggt über journald | journald-`localfile` ergänzen (siehe 3.5) |
-| Regel löst nicht aus | `frequency` zählt ab dem zweiten Ereignis | Ein Ereignis mehr erzeugen als erwartet |
-| Eigene Verbindung tot nach AR-Test | Selbstsperrung durch firewall-drop | Über VMware-Konsole: `sudo iptables -D INPUT -s <IP> -j DROP` |
+| `wazuh-indexer` meldet nach dem ersten Start `failed (Result: timeout)`, Manager und Dashboard bleiben `inactive (dead)` | Der Indexer überschreitet beim Start das systemd-Zeitlimit. Manager und Dashboard sind von ihm abhängig und starten deshalb gar nicht erst. Ressourcen waren nicht die Ursache (8 GB RAM, 37 GB frei, 4 Kerne) | Diagnose über `/var/log/wazuh-indexer/`, da der Dienst nicht ins systemd-Journal schreibt. Prüfung von `vm.max_map_count` (Minimum 262144) und der Heap-Werte in `/etc/wazuh-indexer/jvm.options`. Bei langsamem Datenträger Startzeitfenster mit `systemctl edit wazuh-indexer` und `TimeoutStartSec=900` erhöhen |
+| VM startet nicht, Meldung «The guest operating system has disabled the CPU» | AMD-Prozessor in Kombination mit VMware | `.vmx`-Datei um die cpuid-Zeilen und `featureCompat.enable = "FALSE"` ergänzen |
+| Agent bleibt auf *Never connected* | Ports 1514/1515 blockiert oder falsche Manager-IP | Prüfung mit `nc -zv 192.168.179.129 1514` und `grep -A3 '<client>' /var/ossec/etc/ossec.conf` |
+| Agent wird nach IP-Wechsel *Disconnected* | DHCP hat dem Server eine neue Adresse zugewiesen | Manager-IP in der `ossec.conf` des Agenten korrigieren und Agent neu starten |
+| Manager startet nach Regeländerung nicht | Syntaxfehler in `local_rules.xml` | `sudo /var/ossec/bin/wazuh-logtest -t` und Auswertung von `/var/ossec/logs/ossec.log` |
+| Keine SSH-Events im Dashboard | Ubuntu 24.04 protokolliert über journald statt in `/var/log/auth.log` | journald-`localfile` ergänzen, siehe Abschnitt 4.4 |
+| Regel löst später aus als erwartet | `frequency` zählt ab dem zweiten Ereignis | Ein Ereignis mehr erzeugen als angegeben |
+| Eigene Verbindung nach AR-Test unterbrochen | Selbstsperrung durch firewall-drop | Über die VMware-Konsole: `sudo iptables -D INPUT -s <IP> -j DROP` |
 
-### 11.2 Workaround für AMD-CPUs
-
-In die `.vmx`-Datei der importierten VM anhängen:
-
-```
-cpuid.0.eax = "0000:0000:0000:0000:0000:0000:0000:1011"
-cpuid.0.ebx = "0111:0101:0110:1110:0110:0101:0100:0111"
-cpuid.0.ecx = "0110:1100:0110:0101:0111:0100:0110:1110"
-cpuid.0.edx = "0100:1001:0110:0101:0110:1110:0110:1001"
-cpuid.1.eax = "0000:0000:0000:0001:0000:0110:0111:0001"
-cpuid.1.ebx = "0000:0010:0000:0001:0000:1000:0000:0000"
-cpuid.1.ecx = "1000:0010:1001:1000:0010:0010:0000:0011"
-cpuid.1.edx = "0000:0111:1000:1011:1111:1011:1111:1111"
-featureCompat.enable = "FALSE"
-```
-
-### 11.3 Wichtige Pfade
+### 12.2 Wichtige Pfade
 
 | Pfad | Inhalt |
 |---|---|
-| `/var/ossec/etc/ossec.conf` | Hauptkonfiguration (Manager und Agent) |
-| `/var/ossec/etc/rules/local_rules.xml` | Eigene Regeln (Manager) |
-| `/var/ossec/etc/decoders/local_decoder.xml` | Eigene Decoder (Manager) |
+| `/var/ossec/etc/ossec.conf` | Hauptkonfiguration von Manager und Agent |
+| `/var/ossec/etc/rules/local_rules.xml` | Eigene Regeln auf dem Manager |
 | `/var/ossec/ruleset/sca/` | Mitgelieferte SCA-Policies |
 | `/var/ossec/logs/ossec.log` | Betriebslog von Agent und Manager |
-| `/var/ossec/logs/alerts/alerts.log` | Ausgelöste Alarme (Manager) |
-| `/var/ossec/logs/active-responses.log` | Protokoll der Active Responses (Agent) |
+| `/var/ossec/logs/alerts/alerts.log` | Ausgelöste Alarme auf dem Manager |
+| `/var/ossec/logs/active-responses.log` | Protokoll der Active Responses auf dem Agenten |
 
-### 11.4 Befehlsübersicht
+### 12.3 Befehlsübersicht
 
 ```bash
-# Status
-sudo systemctl status wazuh-manager --no-pager      # auf dem Server
-sudo systemctl status wazuh-agent --no-pager        # auf dem Endpunkt
+# Status der Komponenten
+sudo systemctl status wazuh-manager --no-pager
+sudo systemctl status wazuh-agent --no-pager
 sudo /var/ossec/bin/wazuh-control status
 
-# Agenten auflisten (auf dem Server)
+# Agenten auflisten (auf dem Manager)
 sudo /var/ossec/bin/agent_control -l
 
 # Regeln testen
 sudo /var/ossec/bin/wazuh-logtest
-
-# Konfiguration auf Syntaxfehler prüfen
 sudo /var/ossec/bin/wazuh-logtest -t
 
 # Logs verfolgen
@@ -818,18 +656,36 @@ sudo tail -f /var/ossec/logs/ossec.log
 sudo tail -f /var/ossec/logs/alerts/alerts.log
 ```
 
+### 12.4 Quellen
+
+- Wazuh-Dokumentation, Virtual Machine (OVA): `https://documentation.wazuh.com/current/deployment-options/virtual-machine/virtual-machine.html`
+- Wazuh-Dokumentation, Agent Enrollment Requirements: `https://documentation.wazuh.com/current/user-manual/agent/agent-enrollment/requirements.html`
+- Wazuh-Dokumentation, Architektur: `https://documentation.wazuh.com/current/getting-started/architecture.html`
+- Wazuh-Dokumentation, Active Response: `https://documentation.wazuh.com/current/user-manual/capabilities/active-response/index.html`
+- Unterrichtsunterlagen: Theorie Monitoring, Theorie Hardening
+
 ---
 
-## Abgabe-Checkliste
+## 13. Fazit
 
-- [ ] Gewählte Stufe im Dokument festgehalten (Kapitel 1)
-- [ ] Agent im Dashboard auf *Active*, Screenshot vorhanden
-- [ ] Erkenntnisse aus dem Dashboard dokumentiert (Kapitel 4)
-- [ ] SCA-Befunde bewertet, Härtungsmassnahmen mit Vorher/Nachher belegt (Kapitel 5)
-- [ ] Werkzeugwahl begründet, Alternative genannt (Kapitel 6)
-- [ ] SCA-Policy geprüft, Alarmschwelle begründet gesetzt (Kapitel 7.1, 7.2)
-- [ ] Eigene Regel erstellt, getestet, Screenshot des Alarms (Kapitel 7.3)
-- [ ] Active Response konfiguriert und getestet, HIDS/HIPS-Grenze erklärt (Kapitel 7.4, 7.5)
-- [ ] Mindestens zwei Grenzen des Setups beurteilt (Kapitel 8)
-- [ ] Reflexionsfragen 1–4 beantwortet (Kapitel 9)
-- [ ] KI-Log ausgefüllt (Kapitel 10)
+### Was Wazuh in diesem Aufbau geleistet hat
+
+Am meisten beeindruckt hat mich, wie schnell aus einem unbeobachteten System ein transparentes wird. Wenige Minuten nach der Verbindung des Agenten kannte das Dashboard jedes installierte Paket, jeden offenen Port und jede Abweichung von den CIS-Benchmarks. Diese Transparenz ist der eigentliche Wert des Werkzeugs: Nicht die Alarme sind das Entscheidende, sondern dass man überhaupt erst weiss, in welchem Zustand die eigenen Systeme sind. Vor diesem Auftrag hätte ich nicht sagen können, welche verwundbaren Paketversionen auf einem frisch installierten Ubuntu laufen – und genau das ist das Problem, das Wazuh löst.
+
+Ebenso überzeugend fand ich, dass mehrere Fragestellungen in einem Werkzeug zusammenlaufen. Logauswertung, Integritätsprüfung, Schwachstellen- und Konfigurationsmanagement wären sonst vier getrennte Systeme mit vier Oberflächen. Dass sich all das zentral auswerten lässt, ist der Grund, warum Wazuh für einen öffentlich erreichbaren Server die richtige Wahl ist.
+
+### Kritische Punkte
+
+Der Betrieb ist anspruchsvoller, als die Marketingdarstellung vermuten lässt. Schon der erste Start der OVA brachte ein Problem: Der Indexer lief in einen Timeout, und weil Manager und Dashboard von ihm abhängen, stand das gesamte System still, ohne dass eine aussagekräftige Fehlermeldung erschien. Das systemd-Journal war leer, die eigentliche Ursache steckte in einem separaten Logverzeichnis. Wer Wazuh produktiv betreiben will, braucht solides Linux-Wissen – mit der reinen Klickbedienung im Dashboard kommt man nicht weit.
+
+Eine zweite Erkenntnis betrifft die Standardkonfiguration: Sie passt nie. Unter Ubuntu 24.04 liest der Agent per Default eine Logdatei, die es nicht mehr gibt, weil das System über journald protokolliert. Ohne Anpassung hätte ich einen scheinbar funktionierenden Aufbau gehabt, bei dem SSH-Ereignisse schlicht nie ankommen. Genau das halte ich für die gefährlichste Fehlerart überhaupt: nicht der Fehler, der auffällt, sondern der, der wie Normalbetrieb aussieht.
+
+Dazu kommt der Aufwand für die Nachbearbeitung. Ein grosser Teil der CIS-Befunde war für ein Desktop-System nicht relevant. Diese Bewertung kann kein Werkzeug abnehmen – sie setzt voraus, dass man das eigene System und seinen Verwendungszweck kennt. Ein Score von 100 Prozent ist deshalb kein sinnvolles Ziel.
+
+### Was ich gelernt habe
+
+Fachlich war der grösste Gewinn das Verständnis der Kette vom Ereignis über den Decoder und die Regel bis zum Alarm. Vorher war ein SIEM für mich eine Blackbox, die irgendwie Warnungen produziert. Nachdem ich eine eigene Regel geschrieben, getestet und dabei festgestellt habe, dass `frequency` anders zählt als erwartet, ist daraus ein nachvollziehbarer Ablauf geworden. Die Erkenntnis dahinter gilt allgemein: Eine Regel ist erst fertig, wenn sie unter realen Bedingungen ausgelöst und überprüft wurde. Eine Konfiguration, die plausibel aussieht, aber nie getestet wurde, ist wertlos.
+
+Konzeptionell hat mich die Arbeit an den Grenzen des Werkzeugs am meisten weitergebracht. Der Übergang vom HIDS zum HIPS klang zunächst nach einer reinen Verbesserung – bis klar wurde, dass ich mir mit der Active Response ein neues Betriebsrisiko einhandle: Jede Fehlauslösung sperrt echte Benutzer aus. Sicherheitsmassnahmen sind selten kostenlos, sie sind fast immer ein Tausch. Diese Abwägung bewusst zu treffen und zu begründen, halte ich für den wichtigsten Teil dieses Auftrags.
+
+Zuletzt hat sich mein Blick auf das eigene Setup verändert. Ich überwache genau einen Endpunkt, während der Host, auf dem alles läuft, keinen Agenten trägt. Ein Monitoring, dem man blind vertraut, ist gefährlicher als gar keines, weil es ein Sicherheitsgefühl erzeugt, das weitere Massnahmen verhindert. Deshalb gehört für mich zu jedem eingesetzten Werkzeug künftig die Frage dazu, was es gerade nicht sieht.
