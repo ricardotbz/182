@@ -42,7 +42,6 @@ Aufbau, Konfiguration und Auswertung sind abgeschlossen und dokumentiert. Offen 
 
 - SCA-Score und Anzahl fehlgeschlagener Checks vor und nach der Härtung (Kapitel 6.1)
 - Anzahl Schwachstellen je Schweregrad (Kapitel 6.4)
-- IP-Adresse des überwachten Endpunkts, da die Zuweisung über DHCP erfolgt (Kapitel 2.1)
 
 Die zugehörigen Screenshots werden mit den Werten zusammen ergänzt.
 
@@ -56,7 +55,7 @@ Die zugehörigen Screenshots werden mit den Werten zusammen ergänzt.
 |---|---|---|---|
 | Host | Windows mit VMware Workstation Pro 17 | 17.5.x | – |
 | Zentrale Komponenten | VM «Wazuh-Server», Amazon Linux 2023 | Wazuh 4.14.7 | `192.168.179.129` |
-| Überwachter Endpunkt | VM «Ubuntu-Endpunkt» | Ubuntu 24.04.2 Desktop | DHCP aus 192.168.179.0/24 |
+| Überwachter Endpunkt | VM «Ubuntu-Endpunkt», Hostname `hardening-lab` | Ubuntu 24.04.2 Desktop | `192.168.179.128` |
 | Agent | wazuh-agent, DEB amd64 | 4.14.7 | – |
 
 ### 2.2 Begründung der Aufbauentscheide
@@ -214,11 +213,21 @@ Der Agent erscheint im Dashboard nach kurzer Zeit mit dem Status *Active*.
 
 ![Agent aktiv](Bilder/Monitoring-Wazuh/04-agent-active.png)
 
-### 4.4 Anpassung der Logquelle unter Ubuntu 24.04
+### 4.4 Prüfung der Logquelle unter Ubuntu 24.04
 
-Die Standardkonfiguration des Agenten liest Authentifizierungsereignisse aus `/var/log/auth.log`. Ubuntu 24.04 protokolliert jedoch über journald, und diese Datei existiert je nach Installation nicht mehr. Ohne Anpassung kommen deshalb keine SSH-Ereignisse beim Manager an – die eigene Regel aus Abschnitt 8.3 würde nie auslösen, ohne dass ein Fehler sichtbar wäre.
+Ubuntu 24.04 protokolliert Authentifizierungsereignisse über journald; die früher übliche Datei `/var/log/auth.log` existiert je nach Installation nicht mehr. Ältere Wazuh-Versionen lesen standardmässig genau diese Datei, wodurch SSH-Ereignisse unbemerkt gar nicht erst erfasst werden – ein Fehler, der sich nicht durch eine Meldung zeigt, sondern nur durch ausbleibende Alarme.
 
-Ergänzung in `/var/ossec/etc/ossec.conf` auf dem Agenten:
+Ich habe deshalb kontrolliert, welche Quelle der Agent tatsächlich verwendet:
+
+```bash
+sudo tail -n 20 /var/ossec/logs/ossec.log
+```
+
+```
+2026/09/20 12:53:46 wazuh-logcollector: INFO: (9203): Monitoring journal entries.
+```
+
+In Version 4.14.7 ist die journald-Unterstützung bereits in der Standardkonfiguration des Agenten enthalten, eine Anpassung war nicht nötig. Bei älteren Versionen müsste in `/var/ossec/etc/ossec.conf` folgender Block ergänzt werden:
 
 ```xml
 <localfile>
@@ -227,9 +236,7 @@ Ergänzung in `/var/ossec/etc/ossec.conf` auf dem Agenten:
 </localfile>
 ```
 
-```bash
-sudo systemctl restart wazuh-agent
-```
+Die Prüfung selbst bleibt sinnvoll: Ob die Logquelle stimmt, entscheidet darüber, ob das gesamte Regelwerk überhaupt Daten bekommt.
 
 ---
 
@@ -386,7 +393,17 @@ Wazuh liefert für jedes Betriebssystem eigene Policies mit:
 ls -l /var/ossec/ruleset/sca/
 ```
 
-Die aktive Policy ist im Dashboard unter *Configuration Assessment* ersichtlich. Um die Zuordnung nicht der automatischen Betriebssystemerkennung zu überlassen, habe ich sie in `/var/ossec/etc/ossec.conf` auf dem Agenten explizit gesetzt:
+Die tatsächlich geladene Policy zeigt das Log des Agenten:
+
+```bash
+sudo grep "Loaded policy" /var/ossec/logs/ossec.log
+```
+
+```
+2026/09/20 12:53:45 sca: INFO: Loaded policy '/var/ossec/ruleset/sca/cis_ubuntu24-04.yml'
+```
+
+Die automatische Betriebssystemerkennung hat die korrekte Policy für Ubuntu 24.04 gewählt, eine Korrektur war nicht nötig. Soll die Zuordnung nicht der Erkennung überlassen werden – etwa bei abweichenden Distributionsangaben oder einer eigenen Policy –, lässt sie sich in `/var/ossec/etc/ossec.conf` auf dem Agenten fest vorgeben:
 
 ```xml
 <sca>
@@ -399,7 +416,7 @@ Die aktive Policy ist im Dashboard unter *Configuration Assessment* ersichtlich.
 </sca>
 ```
 
-**Begründung:** Eine Policy für die falsche Distribution oder Version prüft Pfade und Dienste, die auf diesem System gar nicht existieren. Das erzeugt zweifachen Schaden: Fehlalarme, die Zeit kosten, und gleichzeitig übersehene echte Abweichungen, weil die zutreffenden Checks nie ausgeführt werden.
+**Warum die Prüfung dennoch nötig war:** Eine Policy für die falsche Distribution oder Version prüft Pfade und Dienste, die auf diesem System gar nicht existieren. Das erzeugt zweifachen Schaden: Fehlalarme, die Zeit kosten, und gleichzeitig übersehene echte Abweichungen, weil die zutreffenden Checks nie ausgeführt werden. Dass die Erkennung hier richtig lag, weiss man erst nach der Kontrolle.
 
 ### 8.2 Festlegung der Alarmschwelle
 
@@ -471,7 +488,7 @@ Die erste Eingabe trifft die Basisregel 5760 mit Level 5. Erst bei mehrfacher Ei
 **Auslösen unter realen Bedingungen.** Den Angriff habe ich bewusst von der Wazuh-Server-VM aus gestartet und nicht über die Verbindung, mit der ich selbst auf dem System arbeite – andernfalls hätte mich die Active Response aus Abschnitt 8.4 aus meiner eigenen Sitzung ausgesperrt:
 
 ```bash
-for i in $(seq 1 6); do ssh rewan@<UBUNTU_IP> -o PreferredAuthentications=password -o PubkeyAuthentication=no; done
+for i in $(seq 1 6); do ssh r@192.168.179.128 -o PreferredAuthentications=password -o PubkeyAuthentication=no; done
 ```
 
 Kontrolle auf dem Manager:
