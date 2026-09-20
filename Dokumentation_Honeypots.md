@@ -108,7 +108,7 @@ Ergebnis: Es wurden 23 Pakete installiert (u. a. `twisted 26.4.0`, `cryptography
 
 ### 4.3 Konfiguration, Start und Test (Benutzer `r`, Ordner `~/cowrie-lab`)
 
-Für den Test brauchte ich Zugriff per SSH von Windows-Rechner auf die VM (Schlüssel-Login als Benutzer `r`). Ich konnte nicht als Benutzer `cowrie` arbeiten, weil dafür `sudo` mit Passwort nötig gewesen wäre. Ein Passwort gebe ich nicht ein. Deshalb habe ich Cowrie ein zweites Mal ohne Root-Rechte im Home-Verzeichnis von `r` installiert (`~/cowrie-lab`, gleiche Schritte wie in 4.2).  Installation unter `cowrie` habe ich nicht verändert.
+Für den Test brauchte ich Zugriff per SSH von Windows-Rechner auf die VM (Schlüssel-Login als Benutzer `r`). Ich habe  Cowrie ohne Root-Rechte im Home-Verzeichnis von `r` installiert (`~/cowrie-lab`, gleiche Schritte wie in 4.2).  Installation unter `cowrie` habe ich nicht verändert.
 
 **Konfiguration `etc/cowrie.cfg`:** Ich habe Cowrie bewusst nur an die lokale Adresse gebunden, damit der Honeypot beim Test nicht aus dem Netz erreichbar ist. Telnet habe ich abgeschaltet, weil ich es nicht brauchte.
 
@@ -141,7 +141,7 @@ Cowrie lauschte damit ausschliesslich auf `127.0.0.1:2222`. Vorher gab es auf Po
 | Nach `apt install` erschien «build-essential: Befehl nicht gefunden» | Der lange Befehl wurde beim Kopieren in zwei Zeilen geteilt, der Rest lief als eigener Befehl | Harmlos. Ich habe die Installation mit `dpkg -l` geprüft |
 | `sudo` verlangt für `r` ein Passwort, und `/home/cowrie` ist für `r` nicht lesbar | Kein passwortloses sudo | Eigene Installation als `r` in `~/cowrie-lab` (kein Passwort eingegeben) |
 | Meldung «set: Befehl nicht gefunden» und «$'\r': Befehl nicht gefunden» beim Skript | Windows-Zeilenenden (CRLF/BOM) im übertragenen Skript | Harmlos, alle anderen Schritte liefen durch |
-| Docker Desktop (Windows, Vorversuch) lief nicht | Daemon war nicht erreichbar | Quellinstallation in WSL mit `uv`, weil dort `python3-venv` fehlte und `sudo` ein Passwort brauchte |
+| Docker Desktop (Windows, Vorversuch) lief nicht | Daemon war nicht erreichbar | Quellinstallation in WSL mit `uv`, weil dort `python3-venv` fehlte
 
 ---
 
@@ -272,13 +272,13 @@ Der Vorversuch in WSL lieferte ein sehr ähnliches Ergebnis (4 Verbindungen, 2 f
 
 ## 9. Grenzen dieses Tests
 
-Ich möchte ehrlich festhalten, was dieser Test **nicht** zeigt:
+Ich möchte  festhalten, was dieser Test **nicht** zeigt:
 
 - Den Angriff habe ich selbst simuliert. Es gab keine echten Angreifer. Deshalb war die Quell-IP immer `127.0.0.1`, und es gab keine echten Passwortlisten oder Malware.
 - Die Downloads scheiterten bewusst (Test-Adresse), also gab es keine gespeicherte Datei in `var/lib/cowrie/downloads/`.
 - Cowrie ist eine Emulation. Ein erfahrener Angreifer kann ihn an Kleinigkeiten erkennen.
 - Ich habe nur SSH getestet, kein Telnet.
-- Der Hauptversuch lief in einer zweiten Installation (`~/cowrie-lab` als Benutzer `r`), nicht unter dem Benutzer `cowrie`, weil `sudo` ein Passwort verlangte.
+- Der Hauptversuch lief in einer zweiten Installation (`~/cowrie-lab` als Benutzer `r`), nicht unter dem Benutzer `cowrie`
 
 ---
 
@@ -286,14 +286,6 @@ Ich möchte ehrlich festhalten, was dieser Test **nicht** zeigt:
 
 Der Auftrag hat gezeigt, dass Cowrie in wenigen Schritten läuft und schon bei einem kleinen Test sehr viele nützliche Informationen liefert. Am meisten gelernt habe ich bei den Problemen: Ein falsch geteilter Befehl, ein fehlendes `sudo`-Passwort und Windows-Zeilenenden waren alle harmlos, aber man muss sie richtig einordnen. Wichtig war mir zudem, den Honeypot nur lokal zu binden.
 
-Nächste Schritte, die ich sinnvoll finde:
-
-- Cowrie unter dem eigenen Benutzer `cowrie` betreiben (Installation ist vorbereitet).
-- Die Logs zentral sammeln (zum Beispiel mit Wazuh, siehe meine Doku zu Monitoring).
-- Die Login-Regeln in `etc/userdb.txt` anpassen.
-- Den KI-Honeypot Beelzebub ausprobieren.
-
----
 
 
 ## 12. Anhang: Dateien und Quellen
@@ -314,3 +306,4 @@ Nächste Schritte, die ich sinnvoll finde:
 - Cowrie (offizielles Repository): https://github.com/cowrie/cowrie
 - Cowrie Dokumentation, Installation aus dem Quellcode: https://docs.cowrie.org/en/latest/INSTALL.html
 - Cowrie Dokumentation, Docker: https://docs.cowrie.org/en/latest/docker/README.html
+
