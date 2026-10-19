@@ -31,7 +31,7 @@ Die Dokumentation ist so geschrieben, dass andere Lernende die Umgebung Schritt 
 ## Ordnerstruktur
 
 ```text
-M182/
+LB2_Wazuh_HIDS/
 ├── README.md
 ├── 01_Theorie_HIDS_und_Wazuh.md
 ├── 02_Testumgebung_Netzwerkplan.md
