@@ -72,10 +72,3 @@ LB2_Wazuh_HIDS/
 7. Angriffe durchführen (VM3, Datei 03)
 8. Ergebnisse in Kapitel 6 eintragen und bewerten
 
-> **Hinweis:** Alle Angriffe werden **nur** in der isolierten Testumgebung gegen eigene VMs durchgeführt.
-> Angriffe auf fremde Systeme sind verboten (StGB Art. 143bis).
-
-## Platzhalter
-
-Stellen mit `[AUSFÜLLEN]` oder `![Screenshot](...)` müssen während der praktischen Umsetzung mit euren
-eigenen Ergebnissen und Screenshots ergänzt werden.
