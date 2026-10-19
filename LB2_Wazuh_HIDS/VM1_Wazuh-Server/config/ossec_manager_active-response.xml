@@ -1,0 +1,30 @@
+<!--
+  M182 LB2 - Active Response auf dem Wazuh-Manager
+  Diesen Block in /var/ossec/etc/ossec.conf innerhalb von <ossec_config> einfügen
+  (z. B. direkt nach dem bestehenden Abschnitt "<!-- Active response -->").
+  Danach: sudo systemctl restart wazuh-manager
+-->
+
+<!-- 1) Eigene IPs dürfen NIE gesperrt werden (im Abschnitt <global> ergänzen) -->
+<global>
+  <white_list>127.0.0.1</white_list>
+  <white_list>192.168.56.10</white_list>   <!-- Wazuh-Server -->
+  <white_list>192.168.56.1</white_list>    <!-- Host-PC (Host-only-Adapter) -->
+</global>
+
+<!-- 2) Der Befehl "firewall-drop" ist standardmässig vorhanden. Falls nicht: -->
+<command>
+  <name>firewall-drop</name>
+  <executable>firewall-drop</executable>
+  <timeout_allowed>yes</timeout_allowed>
+</command>
+
+<!-- 3) Reaktion: Angreifer-IP auf dem betroffenen Agent sperren -->
+<active-response>
+  <disabled>no</disabled>
+  <command>firewall-drop</command>
+  <location>local</location>
+  <!-- 5763 = Standard SSH-Brute-Force, 100100 = eigene SSH-Regel, 100111 = eigene Portscan-Regel -->
+  <rules_id>5763,100100,100111</rules_id>
+  <timeout>600</timeout>   <!-- Sperre in Sekunden (10 Minuten), danach automatische Freigabe -->
+</active-response>

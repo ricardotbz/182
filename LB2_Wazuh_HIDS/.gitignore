@@ -1,0 +1,95 @@
+# ============================================================
+# M182 LB2 – .gitignore
+# Bilder (Screenshots) werden BEWUSST hochgeladen -> siehe unten.
+# ============================================================
+
+# ---- VM-Dateien (gross, gehören nicht ins Repo) ----
+*.vdi
+*.vmdk
+*.vhd
+*.vhdx
+*.vbox
+*.vbox-prev
+*.ova
+*.ovf
+*.nvram
+*.vmem
+*.vmsd
+*.vmsn
+*.vmss
+*.vmx
+*.vmxf
+*.iso
+*.img
+*.qcow2
+*.raw
+Logs/
+*.vbox-extpack
+
+# ---- Passwörter / Geheimnisse ----
+wazuh-install-files.tar
+wazuh-passwords.txt
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+*_rsa
+*_ed25519
+known_hosts
+authorized_keys
+.env
+.env.*
+secrets*
+*secret*
+*password*
+*passwort*
+*.kdbx
+
+# ---- Konkrete Wortlisten / Angriffs-Inputs (nicht hochladen) ----
+m182-passwords.txt
+m182-users.txt
+rockyou.txt
+
+# ---- Logs / Exporte / Dumps ----
+*.log
+*.log.*
+alerts.json
+*.pcap
+*.pcapng
+*.bak
+*.tmp
+*.swp
+*~
+
+# ---- Archive / grosse Binärdateien ----
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.gz
+*.7z
+*.rar
+
+# ---- Betriebssystem / Editor ----
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# ============================================================
+# Bilder TROTZDEM hochladen (Ausnahmen von Regeln oben).
+# "!" hebt ein Ignore wieder auf. Screenshots sollen auf GitHub
+# sichtbar sein.
+# ============================================================
+!*.png
+!*.jpg
+!*.jpeg
+!*.gif
+!*.svg
+!*.webp
+!screenshots/
+!screenshots/**

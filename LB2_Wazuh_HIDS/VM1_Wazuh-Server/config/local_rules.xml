@@ -1,0 +1,96 @@
+<!--
+  M182 LB2 - Eigene Wazuh-Regeln
+  Pfad auf dem Server: /var/ossec/etc/rules/local_rules.xml
+  Eigene Regel-IDs: 100000 - 120000
+  Nach Änderungen: sudo systemctl restart wazuh-manager
+-->
+
+<group name="m182,">
+
+  <!-- ===================================================== -->
+  <!-- 1) SSH-Brute-Force: strenger als die Standardregel     -->
+  <!--    Standard 5763 = 8 Fehlversuche in 120 s             -->
+  <!--    Eigene Regel = 5 Fehlversuche in 60 s, gleiche IP   -->
+  <!-- ===================================================== -->
+  <rule id="100100" level="12" frequency="5" timeframe="60">
+    <if_matched_group>authentication_failed</if_matched_group>
+    <same_source_ip />
+    <description>M182: SSH-Brute-Force erkannt - 5 Fehlversuche in 60s von $(srcip)</description>
+    <mitre>
+      <id>T1110</id>
+    </mitre>
+    <group>authentication_failures,attack,pci_dss_10.2.4,pci_dss_10.2.5,</group>
+  </rule>
+
+  <!-- Erfolgreicher SSH-Login direkt nach einem Brute-Force-Alert = Angriff erfolgreich -->
+  <rule id="100101" level="14" timeframe="300">
+    <if_group>authentication_success</if_group>
+    <if_matched_sid>100100</if_matched_sid>
+    <same_source_ip />
+    <description>M182: KRITISCH - erfolgreicher SSH-Login nach Brute-Force von $(srcip) (Benutzer: $(dstuser))</description>
+    <mitre>
+      <id>T1110</id>
+      <id>T1078</id>
+    </mitre>
+    <group>attack,brute_force_success,</group>
+  </rule>
+
+  <!-- ===================================================== -->
+  <!-- 2) Portscan-Erkennung über iptables-LOG auf Ubuntu    -->
+  <!--    Auf VM2 schreibt iptables jede neue Verbindung mit -->
+  <!--    dem Präfix "M182-SCAN: " in das Kernel-Log.        -->
+  <!--    Regel 4100 = Wazuh-Firewall-Gruppe (Decoder iptables) -->
+  <!-- ===================================================== -->
+  <rule id="100110" level="3">
+    <if_sid>4100</if_sid>
+    <match>M182-SCAN:</match>
+    <description>M182: Neue eingehende Verbindung von $(srcip) auf Port $(dstport)</description>
+    <group>firewall,</group>
+  </rule>
+
+  <rule id="100111" level="10" frequency="15" timeframe="20">
+    <if_matched_sid>100110</if_matched_sid>
+    <same_source_ip />
+    <different_dstport />
+    <description>M182: Möglicher Portscan - mehr als 15 verschiedene Ports in 20s von $(srcip)</description>
+    <mitre>
+      <id>T1046</id>
+    </mitre>
+    <group>recon,attack,</group>
+  </rule>
+
+  <!-- ===================================================== -->
+  <!-- 3) Änderungen an kritischen Systemdateien (FIM)        -->
+  <!--    550 = Datei geändert, 553 = gelöscht, 554 = neu     -->
+  <!-- ===================================================== -->
+  <rule id="100120" level="12">
+    <if_sid>550</if_sid>
+    <field name="file">^/etc/passwd$|^/etc/shadow$|^/etc/sudoers$|^/etc/ssh/sshd_config$</field>
+    <description>M182: Kritische Systemdatei geändert: $(file)</description>
+    <mitre>
+      <id>T1098</id>
+    </mitre>
+    <group>syscheck,critical_file,</group>
+  </rule>
+
+  <rule id="100121" level="12">
+    <if_sid>554</if_sid>
+    <field name="file">^/etc/sudoers.d/</field>
+    <description>M182: Neue Datei in /etc/sudoers.d angelegt: $(file) - mögliche Rechteausweitung</description>
+    <mitre>
+      <id>T1548.003</id>
+    </mitre>
+    <group>syscheck,critical_file,</group>
+  </rule>
+
+  <rule id="100122" level="10">
+    <if_sid>550,554</if_sid>
+    <field name="file">^/root/.ssh/authorized_keys$|/.ssh/authorized_keys$</field>
+    <description>M182: SSH-Schlüssel hinzugefügt/geändert: $(file) - mögliche Persistenz</description>
+    <mitre>
+      <id>T1098.004</id>
+    </mitre>
+    <group>syscheck,critical_file,</group>
+  </rule>
+
+</group>

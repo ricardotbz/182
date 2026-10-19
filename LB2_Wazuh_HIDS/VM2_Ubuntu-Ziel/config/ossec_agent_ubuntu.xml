@@ -1,0 +1,52 @@
+<!--
+  M182 LB2 - Ergänzungen für /var/ossec/etc/ossec.conf auf dem Agent ubuntu-target
+  Die Blöcke INNERHALB von <ossec_config> einfügen bzw. bestehende Abschnitte anpassen.
+  Danach: sudo systemctl restart wazuh-agent
+-->
+
+<!-- ========== 1) Log-Sammlung ========== -->
+<!-- Nur einfügen, wenn diese Dateien noch nicht überwacht werden (sonst doppelte Alerts) -->
+<localfile>
+  <log_format>syslog</log_format>
+  <location>/var/log/auth.log</location>   <!-- SSH-Anmeldungen, sudo -->
+</localfile>
+
+<localfile>
+  <log_format>syslog</log_format>
+  <location>/var/log/syslog</location>     <!-- System- und Kernelmeldungen (inkl. iptables "M182-SCAN:") -->
+</localfile>
+
+<localfile>
+  <log_format>audit</log_format>
+  <location>/var/log/audit/audit.log</location>   <!-- auditd, für whodata -->
+</localfile>
+
+<!-- ========== 2) File Integrity Monitoring ========== -->
+<!-- Den bestehenden <syscheck>-Abschnitt anpassen: -->
+<syscheck>
+  <disabled>no</disabled>
+  <frequency>43200</frequency>      <!-- vollständiger Scan alle 12 h -->
+  <scan_on_start>yes</scan_on_start>
+
+  <!-- Echtzeit + wer hat geändert (whodata, benötigt auditd) + Inhalt der Änderung -->
+  <directories check_all="yes" whodata="yes" report_changes="yes">/etc</directories>
+  <directories check_all="yes" whodata="yes" report_changes="yes">/opt/m182-wichtig</directories>
+  <directories check_all="yes" realtime="yes">/usr/bin,/usr/sbin,/bin,/sbin</directories>
+  <directories check_all="yes" realtime="yes">/root/.ssh,/home/testuser/.ssh</directories>
+
+  <!-- Dateien, die sich oft ändern, ignorieren (weniger Fehlalarme) -->
+  <ignore>/etc/mtab</ignore>
+  <ignore>/etc/hosts.deny</ignore>
+  <ignore>/etc/random-seed</ignore>
+  <ignore>/etc/adjtime</ignore>
+  <ignore type="sregex">.log$|.swp$</ignore>
+
+  <!-- Keine Inhaltsänderungen von Passwort-Hashes speichern -->
+  <nodiff>/etc/shadow</nodiff>
+  <nodiff>/etc/gshadow</nodiff>
+</syscheck>
+
+<!-- ========== 3) Active Response auf dem Agent ========== -->
+<active-response>
+  <disabled>no</disabled>
+</active-response>
