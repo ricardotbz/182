@@ -1,24 +1,21 @@
 <!--
-  M182 LB2 - Ergänzungen für /var/ossec/etc/ossec.conf auf dem Agent ubuntu-target
+  M182 LB2 - Ergänzungen für /var/ossec/etc/ossec.conf auf dem Agent ubuntu-endpunkt
+  (Ubuntu 24.04, Hostname hardening-lab)
   Die Blöcke INNERHALB von <ossec_config> einfügen bzw. bestehende Abschnitte anpassen.
   Danach: sudo systemctl restart wazuh-agent
 -->
 
 <!-- ========== 1) Log-Sammlung ========== -->
-<!-- Nur einfügen, wenn diese Dateien noch nicht überwacht werden (sonst doppelte Alerts) -->
+<!--
+  Ubuntu 24.04 protokolliert über systemd-journald. Wazuh 4.14 liest in der
+  Standardkonfiguration bereits journald und erfasst damit sowohl SSH-Anmeldungen (sshd)
+  als auch Kernelmeldungen (iptables "M182-SCAN:"). Dieser Block ist in der Agent-ossec.conf
+  normalerweise schon vorhanden - NICHT zusätzlich /var/log/auth.log oder /var/log/syslog
+  einbinden, sonst kommen sshd-Alerts doppelt.
+-->
 <localfile>
-  <log_format>syslog</log_format>
-  <location>/var/log/auth.log</location>   <!-- SSH-Anmeldungen, sudo -->
-</localfile>
-
-<localfile>
-  <log_format>syslog</log_format>
-  <location>/var/log/syslog</location>     <!-- System- und Kernelmeldungen (inkl. iptables "M182-SCAN:") -->
-</localfile>
-
-<localfile>
-  <log_format>audit</log_format>
-  <location>/var/log/audit/audit.log</location>   <!-- auditd, für whodata -->
+  <log_format>journald</log_format>
+  <location>journald</location>
 </localfile>
 
 <!-- ========== 2) File Integrity Monitoring ========== -->

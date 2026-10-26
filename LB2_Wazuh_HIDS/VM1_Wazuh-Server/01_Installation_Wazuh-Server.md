@@ -1,107 +1,115 @@
-# VM1 – Installation des Wazuh-Servers
+# VM1 – Wazuh-Server (vorinstallierte OVA)
 
-Wir installieren alle drei Server-Komponenten (Manager, Indexer, Dashboard) auf einer VM mit dem offiziellen
-**Installations-Assistenten** (All-in-One-Installation).
+In dieser Umgebung wird der Wazuh-Server **nicht** per Installationsskript aufgebaut, sondern als
+**vorinstallierte virtuelle Maschine (OVA)** importiert. Die OVA bringt Manager, Indexer und Dashboard
+fertig konfiguriert mit (Singlenode, alles auf einer VM) und läuft auf **Amazon Linux 2023**.
 
-## 1. Voraussetzungen
+> **Warum OVA statt `wazuh-install.sh`?** Die OVA spart die Zertifikatsgenerierung und das Kernel-Tuning und
+> funktioniert direkt im selben VMware-NAT-Netz wie die anderen VMs. Der Installationsweg über das Skript
+> (`curl -sO https://packages.wazuh.com/4.x/wazuh-install.sh && sudo bash ./wazuh-install.sh -a`) auf einem
+> frischen Ubuntu Server wäre die Alternative – wird hier aber nicht verwendet.
 
-- Ubuntu Server 24.04 LTS frisch installiert, OpenSSH-Server aktiviert
-- Statische IP `192.168.56.10` (siehe [02_Testumgebung_Netzwerkplan.md](../02_Testumgebung_Netzwerkplan.md))
-- Internetzugang (NAT-Adapter)
-- Mindestens 4 GB RAM (empfohlen 8 GB), 50 GB Speicher
+## 1. OVA importieren
 
-## 2. System aktualisieren
+- Datei: `wazuh-4.14.7.ova` (von <https://packages.wazuh.com/4.x/vm/>)
+- In VMware Workstation über **Datei → Öffnen** importieren.
+- Die Warnung „erfüllt die OVF-Spezifikation nicht“ mit **Retry** übergehen (nur strikte Schemaprüfung).
+- Netzwerkadapter auf **NAT (VMnet8)** stellen.
 
-```bash
-sudo apt update && sudo apt full-upgrade -y
-sudo apt install -y curl tar
-sudo hostnamectl set-hostname wazuh-server
-sudo timedatectl set-timezone Europe/Zurich
-sudo reboot
-```
+| Einstellung | Wert |
+|---|---|
+| Arbeitsspeicher | 8192 MB |
+| Prozessoren | 4 |
+| Festplatte | 50 GB |
+| Netzwerk | NAT (VMnet8) |
 
-> **Wichtig:** Die Uhrzeit aller VMs muss übereinstimmen, sonst passen die Zeitstempel der Alerts nicht.
-> Prüfen mit `timedatectl`.
+## 2. Erster Start und Login
 
-## 3. Wazuh All-in-One installieren
+Anmeldung an der Konsole (oder per SSH):
 
-> Die Versionsnummer in der URL (`4.12`) durch die aktuelle Version ersetzen.
-> Aktuelle Version: <https://documentation.wazuh.com/current/quickstart.html>
+| Zugang | Benutzer | Passwort |
+|---|---|---|
+| Konsole / SSH | `wazuh-user` | `wazuh` |
+| Dashboard (Web) | `admin` | `admin` |
 
-```bash
-curl -sO https://packages.wazuh.com/4.12/wazuh-install.sh
-sudo bash ./wazuh-install.sh -a
-```
-
-- `-a` = all-in-one: installiert Indexer, Manager (inkl. Filebeat) und Dashboard
-- Die Installation dauert ca. 5–15 Minuten
-
-Am Ende erscheint eine Ausgabe wie:
-
-```text
-INFO: --- Summary ---
-INFO: You can access the web interface https://<wazuh-dashboard-ip>:443
-    User: admin
-    Password: <ADMIN_PASSWORT>
-INFO: Installation finished.
-```
-
-**Das Passwort sofort sicher notieren** (z. B. im Passwortmanager). Alle Passwörter stehen auch in
-`wazuh-install-files.tar`:
+`wazuh-user` hat sudo-Rechte, der SSH-Login als root ist deaktiviert. IP-Adresse prüfen:
 
 ```bash
-sudo tar -O -xvf wazuh-install-files.tar wazuh-install-files/wazuh-passwords.txt
+ip -4 a show eth0
 ```
 
-## 4. Dienste prüfen
+In dieser Umgebung hat der Server die Adresse `192.168.179.129` (DHCP aus VMnet8).
+
+> **Zeit prüfen:** Die Uhrzeit aller VMs muss übereinstimmen, sonst passen die Zeitstempel der Alerts nicht
+> (`timedatectl`). Der Server läuft auf **UTC**, die Ubuntu-VM auf Europe/Zurich – das ist in Ordnung, solange
+> die absolute Zeit (UTC) stimmt. Wazuh rechnet intern in UTC.
+
+## 3. Dienste prüfen
 
 ```bash
-sudo systemctl status wazuh-manager
-sudo systemctl status wazuh-indexer
-sudo systemctl status wazuh-dashboard
-sudo systemctl status filebeat
+sudo systemctl status wazuh-indexer wazuh-manager wazuh-dashboard filebeat --no-pager | grep -E "●|Active"
 ```
 
-Alle Dienste müssen `active (running)` anzeigen.
+Alle vier müssen `active (running)` sein. Die einzelnen Manager-Prozesse:
 
-Offene Ports prüfen:
+```bash
+sudo /var/ossec/bin/wazuh-control status
+```
+
+Offene Ports:
 
 ```bash
 sudo ss -tlnp | grep -E '1514|1515|55000|9200|443'
 ```
 
-## 5. Firewall (optional, empfohlen)
+## 4. Wichtiger Hinweis: langsamer Start des Indexers
 
-Wenn `ufw` verwendet wird:
+Auf einer ressourcenschwachen VM (oder wenn mehrere VMs gleichzeitig laufen) braucht der **Indexer** beim Start
+sehr lange – in dieser Umgebung über 5 Minuten. Das Standard-Zeitlimit von systemd (`TimeoutStartSec`) bricht
+den Start dann ab, und `wazuh-indexer` meldet `failed (Result: timeout)`. Manager und Dashboard hängen vom
+Indexer ab und starten dann gar nicht erst.
+
+**Lösung:** Das Start-Zeitlimit des Indexers aufheben (einmalig):
 
 ```bash
-sudo ufw allow 22/tcp
-sudo ufw allow 443/tcp
-sudo ufw allow 1514/tcp
-sudo ufw allow 1515/tcp
-sudo ufw allow 55000/tcp
-sudo ufw enable
-sudo ufw status
+sudo systemctl edit wazuh-indexer
 ```
 
-## 6. Erster Login im Dashboard
+Im Editor eintragen:
 
-1. Im Browser des Host-PCs öffnen: `https://192.168.56.10`
-2. Zertifikatswarnung akzeptieren (selbstsigniertes Zertifikat)
-3. Login mit `admin` und dem Passwort aus Schritt 3
+```ini
+[Service]
+TimeoutStartSec=infinity
+```
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart wazuh-indexer
+```
+
+Danach ist der Indexer nach einigen Minuten `active`. Kontrolle:
+
+```bash
+sudo systemctl is-active wazuh-indexer
+curl -sk -u admin:admin https://127.0.0.1:9200/_cluster/health
+```
+
+> Nach **jedem** Neustart der VM zeigt das Dashboard zunächst einige Minuten lang
+> „Wazuh dashboard server is not ready yet“, bis der Indexer vollständig oben ist. Das ist normal.
+
+## 5. Erster Login im Dashboard
+
+1. Im Browser des Host-PCs öffnen: `https://192.168.179.129`
+   (Das vorangestellte `https://` ist wichtig – ohne Protokoll versucht der Browser Port 80, auf dem nichts läuft.)
+2. Zertifikatswarnung akzeptieren (selbstsigniertes Zertifikat der OVA).
+3. Login mit `admin` / `admin`.
 
 ![Screenshot Dashboard Login](../screenshots/vm1_dashboard_login.png)
 
-## 7. Automatische Updates von Wazuh verhindern
+> **Sicherheitshinweis:** `admin/admin` ist der öffentlich dokumentierte OVA-Standard. In einer produktiven
+> Umgebung wären diese Zugänge sofort zu ändern. Für die Laborumgebung bleiben sie bewusst stehen.
 
-Damit `apt upgrade` Wazuh nicht ungewollt auf eine inkompatible Version hebt:
-
-```bash
-sudo sed -i "s/^deb /#deb /" /etc/apt/sources.list.d/wazuh.list
-sudo apt update
-```
-
-## 8. Agents anbinden
+## 6. Agents anbinden
 
 Die Agents werden auf VM2 und VM3 installiert:
 
@@ -114,12 +122,12 @@ Danach auf dem Server kontrollieren:
 sudo /var/ossec/bin/agent_control -l
 ```
 
-Erwartete Ausgabe (Beispiel):
+Erwartete Ausgabe:
 
 ```text
 Wazuh agent_control. List of available agents:
    ID: 000, Name: wazuh-server (server), IP: 127.0.0.1, Active/Local
-   ID: 001, Name: ubuntu-target, IP: any, Active
+   ID: 001, Name: ubuntu-endpunkt, IP: any, Active
    ID: 002, Name: kali-attacker, IP: any, Active
 ```
 
@@ -127,9 +135,9 @@ Im Dashboard: **Agents management → Summary** → beide Agents müssen **activ
 
 ![Screenshot Agents aktiv](../screenshots/vm1_agents_active.png)
 
-## 9. Vulnerability Detection und SCA prüfen
+## 7. Vulnerability Detection und SCA prüfen
 
-Beide Module sind ab Wazuh 4.8 standardmässig aktiv. Prüfen in `/var/ossec/etc/ossec.conf`:
+Beide Module sind in der OVA standardmässig aktiv. Prüfen in `/var/ossec/etc/ossec.conf`:
 
 ```xml
 <vulnerability-detection>
@@ -141,17 +149,18 @@ Beide Module sind ab Wazuh 4.8 standardmässig aktiv. Prüfen in `/var/ossec/etc
 
 Ergebnisse im Dashboard:
 
-- **Vulnerability Detection** → Agent `ubuntu-target` auswählen → Liste der CVEs
+- **Vulnerability Detection** → Agent `ubuntu-endpunkt` auswählen → Liste der CVEs
 - **Configuration Assessment** → Agent auswählen → CIS-Benchmark für Ubuntu (bestandene / fehlgeschlagene Checks)
 
 Diese Ergebnisse werden in [03_Auswertung_Wirksamkeit.md](../03_Auswertung_Wirksamkeit.md) ausgewertet
 (Handlungsziel 1 und 2).
 
-## 10. Fehlersuche
+## 8. Fehlersuche
 
 | Problem | Lösung |
 |---|---|
-| Dashboard nicht erreichbar | `systemctl status wazuh-dashboard`, Firewall prüfen, richtige IP? |
-| Installation bricht ab (zu wenig RAM) | RAM der VM erhöhen (min. 4 GB) |
-| Agent wird nicht angezeigt | Port 1514/1515 offen? `tail -f /var/ossec/logs/ossec.log` |
-| „Wazuh API not reachable“ | `systemctl restart wazuh-manager`, Port 55000 prüfen |
+| Dashboard „not ready yet“ | Indexer noch im Start – einige Minuten warten, `systemctl is-active wazuh-indexer` |
+| `wazuh-indexer failed (timeout)` | `TimeoutStartSec=infinity` setzen (siehe Abschnitt 4), dann neu starten |
+| Dashboard gar nicht erreichbar | `sudo ss -tlnp \| grep 443` – läuft der node-Prozess? ggf. `sudo systemctl restart wazuh-dashboard` |
+| Agent wird nicht angezeigt | Port 1514/1515 offen? `sudo tail -f /var/ossec/logs/ossec.log` |
+| „Wazuh API not reachable“ | `sudo systemctl restart wazuh-manager`, Port 55000 prüfen |

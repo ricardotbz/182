@@ -3,10 +3,11 @@
 | Eigenschaft | Wert |
 |---|---|
 | Hostname | `wazuh-server` |
-| IP | `192.168.56.10` |
-| OS | Ubuntu Server 24.04 LTS |
-| Ressourcen | 2–4 vCPU, 8 GB RAM (min. 4 GB), 50 GB Disk |
-| Komponenten | Wazuh Manager, Wazuh Indexer, Wazuh Dashboard (All-in-One) |
+| IP | `192.168.179.129` |
+| OS | Amazon Linux 2023 (vorinstallierte Wazuh-OVA 4.14.7) |
+| Ressourcen | 4 vCPU, 8 GB RAM, 50 GB Disk |
+| Login | Konsole/SSH: `wazuh-user` / `wazuh` · Dashboard: `admin` / `admin` |
+| Komponenten | Wazuh Manager, Wazuh Indexer, Wazuh Dashboard (Singlenode) |
 | Rolle | Empfängt Daten der Agents, erzeugt Alerts, steuert Active Response |
 
 ## Dateien in diesem Ordner

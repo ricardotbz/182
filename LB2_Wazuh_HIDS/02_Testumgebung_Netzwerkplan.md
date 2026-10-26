@@ -2,14 +2,19 @@
 
 ## 2.1 Übersicht der VMs
 
-| VM | Rolle | Betriebssystem | IP-Adresse | vCPU | RAM | Disk |
-|---|---|---|---|---|---|---|
-| **VM1** | Wazuh-Server (Manager, Indexer, Dashboard) | Ubuntu Server 24.04 LTS | `192.168.56.10` | 2–4 | 8 GB (min. 4 GB) | 50 GB |
-| **VM2** | Überwachtes Zielsystem (Agent) | Ubuntu Server 24.04 LTS | `192.168.56.20` | 1–2 | 2 GB | 20 GB |
-| **VM3** | Angreifer (Agent) | Kali Linux (aktuell) | `192.168.56.30` | 2 | 2–4 GB | 30 GB |
+| VM | Rolle | Betriebssystem | Hostname | IP-Adresse | vCPU | RAM | Disk |
+|---|---|---|---|---|---|---|---|
+| **VM1** | Wazuh-Server (Manager, Indexer, Dashboard) | Amazon Linux 2023 (Wazuh-OVA 4.14.7) | `wazuh-server` | `192.168.179.129` | 4 | 8 GB | 50 GB |
+| **VM2** | Überwachtes Zielsystem (Agent) | Ubuntu 24.04 Desktop | `hardening-lab` | `192.168.179.128` | 2 | 4 GB | 80 GB |
+| **VM3** | Angreifer (Agent) | Kali Linux Rolling | `kali` | `192.168.179.130` | 2 | 4 GB | 80 GB |
 
-> Die IP-Adressen sind Beispiele. Wer andere Adressen verwendet, muss sie in **allen** Befehlen und Konfigurationen
-> ersetzen.
+> **IP-Adressen:** Die VMs beziehen ihre Adresse per DHCP aus dem VMware-NAT-Netz (VMnet8, `192.168.179.0/24`).
+> Die hier genannten Adressen sind die in dieser Umgebung tatsächlich vergebenen. Nach einem längeren Stillstand
+> kann der DHCP-Server andere Adressen vergeben; dann mit `ip -4 a` die aktuelle Adresse prüfen und in den
+> Befehlen ersetzen. Die Manager-IP `192.168.179.129` ist in den Agents fest hinterlegt — ändert sie sich,
+> müssen die Agents angepasst werden.
+>
+> **Server-Login (OVA):** Benutzer `wazuh-user`, Passwort `wazuh` (Konsole/SSH). **Dashboard:** `admin` / `admin`.
 
 **Warum zwei Agents?** Die Ubuntu-VM ist das eigentliche Ziel. Auf Kali läuft ebenfalls ein Agent, damit (a) die
 Anforderung „mindestens zwei Agents“ erfüllt ist und (b) wir sehen, welche Informationen Wazuh auf einem
@@ -17,51 +22,51 @@ Angreifer-System sammelt (SCA, Vulnerability Detection, Prozesse).
 
 ## 2.2 Netzwerk
 
-Alle VMs hängen in einem **isolierten Netzwerk**. Für Paket-Updates braucht jede VM zusätzlich Internet.
+In dieser Umgebung läuft **VMware Workstation** auf einem Windows-Host. Alle drei VMs hängen am selben
+**NAT-Netz VMnet8** (`192.168.179.0/24`). Dieses eine Netz deckt beide Anforderungen ab:
 
-**VirtualBox:**
+- **Internet** für Paket-Updates und Agent-Download (über das NAT-Gateway `192.168.179.2`).
+- **Kommunikation untereinander**, da alle VMs im selben Subnetz liegen und sich direkt erreichen.
 
-| Adapter | Typ | Zweck |
-|---|---|---|
-| Adapter 1 | NAT | Internet für Updates und Installation |
-| Adapter 2 | Host-only-Adapter (`vboxnet0`, 192.168.56.0/24, DHCP aus) | Kommunikation zwischen den VMs |
+| Rolle | Wert |
+|---|---|
+| Virtualisierung | VMware Workstation (Windows-Host) |
+| Netz | NAT, VMnet8, `192.168.179.0/24` |
+| Adresszuweisung | DHCP durch VMware |
+| NAT-Gateway (Internet) | `192.168.179.2` |
+| Host-PC (VMnet8-Adapter) | `192.168.179.1` |
 
-**VMware Workstation:** Analog mit „NAT“ + „Host-only“ (VMnet1) oder einem eigenen LAN-Segment.
+> Ein eigener Host-only-Adapter wie bei VirtualBox ist hier nicht nötig: Über VMnet8 sehen sich die VMs
+> gegenseitig **und** kommen ins Internet. Ein Bridged-Adapter wäre im Schulnetz unzuverlässig (DHCP, Client-Isolation).
 
 ```text
-                 Host-only-Netz 192.168.56.0/24
+                 VMware NAT-Netz VMnet8  192.168.179.0/24
    ┌───────────────────┬─────────────────────┬────────────────────┐
    │                   │                     │                    │
-┌──┴────────────┐  ┌───┴───────────────┐  ┌──┴────────────────┐
-│ VM1 Wazuh     │  │ VM2 Ubuntu-Ziel   │  │ VM3 Kali          │
-│ 192.168.56.10 │  │ 192.168.56.20     │  │ 192.168.56.30     │
-│ Manager       │◀─│ wazuh-agent       │◀─│ nmap, hydra       │
-│ Indexer       │  │ sshd, iptables    │  │ wazuh-agent       │
-│ Dashboard     │◀─┼───────────────────┼──│                   │
-└───────────────┘  └───────────────────┘  └───────────────────┘
-      ▲  Browser https://192.168.56.10 (vom Host-PC aus)
+┌──┴──────────────┐  ┌─┴─────────────────┐  ┌┴──────────────────┐
+│ VM1 Wazuh       │  │ VM2 hardening-lab │  │ VM3 kali          │
+│ 192.168.179.129 │  │ 192.168.179.128   │  │ 192.168.179.130   │
+│ Manager         │◀─│ wazuh-agent       │◀─│ nmap, hydra       │
+│ Indexer         │  │ sshd, iptables    │  │ wazuh-agent       │
+│ Dashboard       │◀─┼───────────────────┼──│                   │
+└─────────────────┘  └───────────────────┘  └───────────────────┘
+      ▲  Browser https://192.168.179.129 (vom Host-PC aus)
 ```
 
-## 2.3 Statische IP setzen (Ubuntu, Netplan)
+## 2.3 IP-Adressen (DHCP)
 
-Datei `/etc/netplan/50-m182.yaml` (Interface-Namen mit `ip a` prüfen, z. B. `enp0s8`):
-
-```yaml
-network:
-  version: 2
-  ethernets:
-    enp0s8:
-      dhcp4: no
-      addresses: [192.168.56.10/24]   # VM1 = .10, VM2 = .20
-```
+Die VMs beziehen ihre Adresse automatisch per DHCP aus dem VMnet8-Netz. Eine manuelle statische Konfiguration
+ist nicht nötig. Die aktuelle Adresse einer VM prüft man mit:
 
 ```bash
-sudo chmod 600 /etc/netplan/50-m182.yaml
-sudo netplan apply
-ip a show enp0s8
+ip -4 a show eth0     # Server (Amazon Linux) und Kali: eth0
+ip -4 a show ens33    # Ubuntu-VM: ens33
 ```
 
-Für Kali siehe [VM3_Kali-Angreifer/01_Vorbereitung_Kali.md](VM3_Kali-Angreifer/01_Vorbereitung_Kali.md).
+> **Wichtig:** Die Manager-IP `192.168.179.129` ist in beiden Agents fest hinterlegt. Bekäme der Server nach
+> einem Neustart eine andere DHCP-Adresse, würden die Agents die Verbindung verlieren. In dieser Umgebung
+> ist die Adresse über die DHCP-Lease stabil geblieben. Für einen dauerhaften Betrieb wäre eine DHCP-Reservierung
+> oder eine statische Adresse sinnvoll.
 
 ## 2.4 Benötigte Ports
 
@@ -78,24 +83,24 @@ Für Kali siehe [VM3_Kali-Angreifer/01_Vorbereitung_Kali.md](VM3_Kali-Angreifer/
 
 ```bash
 sudo hostnamectl set-hostname wazuh-server    # VM1
-sudo hostnamectl set-hostname ubuntu-target   # VM2
-sudo hostnamectl set-hostname kali-attacker   # VM3
+sudo hostnamectl set-hostname hardening-lab   # VM2
+sudo hostnamectl set-hostname kali   # VM3
 ```
 
 Optional `/etc/hosts` auf allen VMs:
 
 ```text
-192.168.56.10  wazuh-server
-192.168.56.20  ubuntu-target
-192.168.56.30  kali-attacker
+192.168.179.129  wazuh-server
+192.168.179.128  hardening-lab
+192.168.179.130  kali
 ```
 
 ## 2.6 Verbindungstest
 
 ```bash
-ping -c 3 192.168.56.10
-ping -c 3 192.168.56.20
-ping -c 3 192.168.56.30
+ping -c 3 192.168.179.129
+ping -c 3 192.168.179.128
+ping -c 3 192.168.179.130
 ```
 
 ## 2.7 Ablauf des Projekts

@@ -8,8 +8,8 @@
 <!-- 1) Eigene IPs dürfen NIE gesperrt werden (im Abschnitt <global> ergänzen) -->
 <global>
   <white_list>127.0.0.1</white_list>
-  <white_list>192.168.56.10</white_list>   <!-- Wazuh-Server -->
-  <white_list>192.168.56.1</white_list>    <!-- Host-PC (Host-only-Adapter) -->
+  <white_list>192.168.179.129</white_list>   <!-- Wazuh-Server -->
+  <white_list>192.168.179.1</white_list>    <!-- Host-PC (VMnet8-Adapter) -->
 </global>
 
 <!-- 2) Der Befehl "firewall-drop" ist standardmässig vorhanden. Falls nicht: -->

@@ -2,34 +2,26 @@
 
 ## 1. Netzwerk
 
-- Adapter 1 = NAT (Internet), Adapter 2 = Host-only
-- Statische IP `192.168.56.30`
+- VMware-Adapter auf **NAT (VMnet8)** – Internet und VM-zu-VM in einem Netz (siehe [Netzwerkplan](../02_Testumgebung_Netzwerkplan.md#22-netzwerk))
+- IP-Adresse per DHCP (`192.168.179.130`)
 
-Kali nutzt meist NetworkManager. Statische IP über die GUI (Settings → Network) oder per Datei:
-
-```bash
-sudo nano /etc/network/interfaces
-```
-
-```text
-auto eth1
-iface eth1 inet static
-    address 192.168.56.30
-    netmask 255.255.255.0
-```
+Kali bezieht die Adresse automatisch über NetworkManager. Prüfen:
 
 ```bash
-sudo systemctl restart networking
-ip -br a
+ip -4 a show eth0
 ```
 
-Interface-Name mit `ip -br a` prüfen (oft `eth1` oder `enp0s8`).
+In dieser Umgebung ist das die Adresse `192.168.179.130`.
+
+> **Zeitzone:** Das verwendete Kali-Image stand auf `America/New_York`. Für einheitliche Zeitstempel kann man
+> auf Europe/Zurich stellen (siehe nächster Abschnitt). Für die Angriffe selbst ist das nicht entscheidend,
+> da die Erkennung auf der Ubuntu-VM stattfindet.
 
 ## 2. System aktualisieren und Werkzeuge
 
 ```bash
 sudo apt update && sudo apt full-upgrade -y
-sudo hostnamectl set-hostname kali-attacker
+sudo hostnamectl set-hostname kali
 sudo timedatectl set-timezone Europe/Zurich
 ```
 
@@ -43,8 +35,8 @@ sudo apt install -y nmap hydra curl gnupg
 ## 3. Verbindung zum Ziel testen
 
 ```bash
-ping -c 3 192.168.56.20
-ping -c 3 192.168.56.10
+ping -c 3 192.168.179.128
+ping -c 3 192.168.179.129
 ```
 
 ## 4. Wortliste (Passwortliste) für den Brute-Force

@@ -2,10 +2,11 @@
 
 | Eigenschaft | Wert |
 |---|---|
-| Hostname | `ubuntu-target` |
-| IP | `192.168.56.20` |
-| OS | Ubuntu Server 24.04 LTS |
-| Ressourcen | 1–2 vCPU, 2 GB RAM, 20 GB Disk |
+| Hostname | `hardening-lab` |
+| Agent-Name in Wazuh | `ubuntu-endpunkt` |
+| IP | `192.168.179.128` |
+| OS | Ubuntu 24.04 Desktop |
+| Ressourcen | 2 vCPU, 4 GB RAM, 80 GB Disk |
 | Software | OpenSSH-Server, iptables, auditd, Wazuh-Agent |
 | Rolle | Wird von Kali angegriffen und von Wazuh überwacht. Hier greift Active Response (IP-Sperre). |
 
@@ -22,8 +23,8 @@
 
 | Bereich | Quelle | Wazuh-Modul |
 |---|---|---|
-| SSH-Anmeldungen | `/var/log/auth.log` | Log-Analyse (logcollector) |
-| Systemmeldungen, Kernel/Firewall | `/var/log/syslog`, `/var/log/kern.log` | Log-Analyse |
+| SSH-Anmeldungen | journald (`sshd`) | Log-Analyse (logcollector) |
+| Systemmeldungen, Kernel/Firewall | journald (`kernel`, iptables `M182-SCAN:`) | Log-Analyse |
 | Änderungen an Dateien | `/etc`, `/usr/bin`, `/usr/sbin`, `/root`, `/home` | FIM (syscheck) |
 | Installierte Pakete / CVEs | Paketliste | Syscollector + Vulnerability Detection |
 | Härtung (CIS Benchmark) | Systemkonfiguration | SCA |

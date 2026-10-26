@@ -37,8 +37,8 @@ Hier werden die Ergebnisse der Angriffe gesammelt und bewertet (Handlungsziel 5 
 
 | Modul | Ergebnis (Beispiel) | Euer Ergebnis |
 |---|---|---|
-| Vulnerability Detection (ubuntu-target) | Anzahl CVEs nach Schweregrad (Critical/High/Medium/Low) | [AUSFÜLLEN] |
-| SCA / CIS-Benchmark (ubuntu-target) | Score in %, Anzahl Failed Checks | [AUSFÜLLEN] |
+| Vulnerability Detection (ubuntu-endpunkt) | Anzahl CVEs nach Schweregrad (Critical/High/Medium/Low) | [AUSFÜLLEN] |
+| SCA / CIS-Benchmark (ubuntu-endpunkt) | Score in %, Anzahl Failed Checks | [AUSFÜLLEN] |
 | Wichtigste fehlgeschlagene SCA-Checks | z. B. „SSH PermitRootLogin“, „Passwort-Policy“ | [AUSFÜLLEN] |
 
 Screenshots: `screenshots/vm1_vulnerability.png`, `screenshots/vm1_sca.png`

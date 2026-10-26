@@ -1,24 +1,17 @@
 # VM3 – Wazuh-Agent auf Kali installieren
 
-Kali basiert auf Debian, deshalb funktioniert das DEB-Paket wie bei Ubuntu.
+Kali basiert auf Debian, deshalb funktioniert das DEB-Paket wie bei Ubuntu. Der Server läuft mit **Wazuh 4.14.7**.
+Damit die Versionen zusammenpassen, wird das DEB-Paket in **genau dieser Version** direkt installiert (der Agent
+darf nie neuer als der Manager sein).
 
 ```bash
-# GPG-Schlüssel importieren
-curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH | \
-  sudo gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/wazuh.gpg --import
-sudo chmod 644 /usr/share/keyrings/wazuh.gpg
+# Passendes DEB-Paket herunterladen (Version = Server-Version 4.14.7)
+cd /tmp
+wget https://packages.wazuh.com/4.x/apt/pool/main/w/wazuh-agent/wazuh-agent_4.14.7-1_amd64.deb
 
-# Repository hinzufügen
-echo "deb [signed-by=/usr/share/keyrings/wazuh.gpg] https://packages.wazuh.com/4.x/apt/ stable main" | \
-  sudo tee /etc/apt/sources.list.d/wazuh.list
-sudo apt update
-
-# Agent installieren, Manager-Adresse und Namen setzen
-sudo WAZUH_MANAGER="192.168.56.10" WAZUH_AGENT_NAME="kali-attacker" apt install -y wazuh-agent
-
-# Updates festhalten
-sudo sed -i "s/^deb /#deb /" /etc/apt/sources.list.d/wazuh.list
-sudo apt update
+# Installieren und dabei Manager-Adresse + Agent-Name setzen
+sudo WAZUH_MANAGER='192.168.179.129' WAZUH_AGENT_GROUP='default' WAZUH_AGENT_NAME='kali-attacker' \
+  dpkg -i ./wazuh-agent_4.14.7-1_amd64.deb
 ```
 
 Agent starten:
@@ -43,7 +36,7 @@ sudo /var/ossec/bin/agent_control -l
 ```
 
 ```text
-   ID: 001, Name: ubuntu-target,  IP: any, Active
+   ID: 001, Name: ubuntu-endpunkt,  IP: any, Active
    ID: 002, Name: kali-attacker,  IP: any, Active
 ```
 

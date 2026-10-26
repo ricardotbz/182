@@ -104,7 +104,7 @@ sudo /var/ossec/bin/wazuh-logtest
 Dann eine Logzeile einfügen, z. B.:
 
 ```text
-Oct 19 14:12:01 ubuntu-target sshd[1234]: Failed password for testuser from 192.168.56.30 port 51234 ssh2
+Oct 19 14:12:01 hardening-lab sshd[1234]: Failed password for testuser from 192.168.179.130 port 51234 ssh2
 ```
 
 Ausgabe (gekürzt):
@@ -112,7 +112,7 @@ Ausgabe (gekürzt):
 ```text
 **Phase 2: Completed decoding.
         name: 'sshd'
-        srcip: '192.168.56.30'
+        srcip: '192.168.179.130'
         dstuser: 'testuser'
 **Phase 3: Completed filtering (rules).
         id: '5760'
@@ -125,10 +125,10 @@ Fügt man dieselbe Zeile **5-mal** ein, erscheint Regel **100100**.
 Test für den Portscan (Kernel-Meldung von iptables):
 
 ```text
-Oct 19 14:20:01 ubuntu-target kernel: [ 1234.567890] M182-SCAN: IN=enp0s8 OUT= MAC=08:00:27:aa:bb:cc:08:00:27:dd:ee:ff:08:00 SRC=192.168.56.30 DST=192.168.56.20 LEN=44 TOS=0x00 PREC=0x00 TTL=52 ID=12345 PROTO=TCP SPT=54321 DPT=80 WINDOW=1024 RES=0x00 SYN URGP=0
+Oct 19 14:20:01 hardening-lab kernel: [ 1234.567890] M182-SCAN: IN=ens33 OUT= MAC=08:00:27:aa:bb:cc:08:00:27:dd:ee:ff:08:00 SRC=192.168.179.130 DST=192.168.179.128 LEN=44 TOS=0x00 PREC=0x00 TTL=52 ID=12345 PROTO=TCP SPT=54321 DPT=80 WINDOW=1024 RES=0x00 SYN URGP=0
 ```
 
-Erwartet: Decoder `iptables`, `srcip: 192.168.56.30`, `dstport: 80`, Regel **100110**.
+Erwartet: Decoder `iptables`, `srcip: 192.168.179.130`, `dstport: 80`, Regel **100110**.
 
 > **Falls der Decoder `iptables` nicht greift** (z. B. weil das Log-Format anders ist), zeigt `wazuh-logtest`
 > nur `kernel` als Decoder. Dann folgenden eigenen Decoder in `/var/ossec/etc/decoders/local_decoder.xml`

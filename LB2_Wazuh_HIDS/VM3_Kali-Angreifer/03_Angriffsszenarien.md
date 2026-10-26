@@ -1,9 +1,9 @@
 # VM3 – Angriffsszenarien
 
-Drei Szenarien gegen `ubuntu-target` (192.168.56.20). Nach jedem Angriff wird im Wazuh-Dashboard geprüft, welche
+Drei Szenarien gegen `ubuntu-endpunkt` (192.168.179.128). Nach jedem Angriff wird im Wazuh-Dashboard geprüft, welche
 Alerts entstanden sind. Vor dem Start den Snapshot `03_konfiguriert` auf allen VMs sicherstellen.
 
-**Dashboard-Ansicht während der Tests:** *Threat Hunting → Events*, Agent-Filter `agent.name:ubuntu-target`,
+**Dashboard-Ansicht während der Tests:** *Threat Hunting → Events*, Agent-Filter `agent.name:ubuntu-endpunkt`,
 Zeitbereich „Last 15 minutes“, Auto-Refresh an.
 
 ---
@@ -14,7 +14,7 @@ Zeitbereich „Last 15 minutes“, Auto-Refresh an.
 **Erwartete Erkennung:** Regeln 5760 → 5763 / 100100, danach Active Response (IP-Sperre).
 
 ```bash
-hydra -L ~/m182-users.txt -P ~/m182-passwords.txt -t 4 -f ssh://192.168.56.20
+hydra -L ~/m182-users.txt -P ~/m182-passwords.txt -t 4 -f ssh://192.168.179.128
 ```
 
 | Option | Bedeutung |
@@ -35,14 +35,14 @@ Sperre auf der Ubuntu-VM prüfen:
 
 ```bash
 # auf VM2:
-sudo iptables -L INPUT -n --line-numbers | grep 192.168.56.30
+sudo iptables -L INPUT -n --line-numbers | grep 192.168.179.130
 sudo tail -f /var/ossec/logs/active-responses.log
 ```
 
 Von Kali aus prüfen, dass die Verbindung blockiert ist:
 
 ```bash
-ssh testuser@192.168.56.20   # -> Timeout / no route
+ssh testuser@192.168.179.128   # -> Timeout / no route
 ```
 
 > **Variante ohne Active Response** (um nur die Erkennung zu zeigen): den `<active-response>`-Block auf dem
@@ -67,27 +67,27 @@ ssh testuser@192.168.56.20   # -> Timeout / no route
 **Erwartete Erkennung:** Regeln 100110 (einzelne Verbindung) → 100111 (Portscan, Level 10).
 
 > Falls die IP aus Szenario 1 noch gesperrt ist: 600 s warten oder auf VM2 die Sperre entfernen:
-> `sudo iptables -D INPUT -s 192.168.56.30 -j DROP`
+> `sudo iptables -D INPUT -s 192.168.179.130 -j DROP`
 
 ```bash
 # TCP-Connect-Scan der 1000 häufigsten Ports (erzeugt saubere Logzeilen)
-nmap -sT -p 1-1000 192.168.56.20
+nmap -sT -p 1-1000 192.168.179.128
 
 # Variante: schneller SYN-Scan über viele Ports
-sudo nmap -sS -p 1-1000 --min-rate 500 192.168.56.20
+sudo nmap -sS -p 1-1000 --min-rate 500 192.168.179.128
 ```
 
 **Beobachtung:**
 
 1. Viele Alerts **100110** (je neue Verbindung, Level 3).
-2. Sammel-Alert **100111** *(Möglicher Portscan, Level 10)* mit `srcip 192.168.56.30`.
+2. Sammel-Alert **100111** *(Möglicher Portscan, Level 10)* mit `srcip 192.168.179.130`.
 3. MITRE-Technik **T1046** im Alert sichtbar.
 4. Da 100111 ebenfalls in der Active-Response-Liste steht, wird Kali auch hier gesperrt.
 
 Auf VM2 kontrollieren:
 
 ```bash
-sudo grep "M182-SCAN" /var/log/syslog | tail -n 20
+sudo journalctl -k | grep "M182-SCAN" | tail -n 20
 ```
 
 | Prüfpunkt | Erwartet | Ergebnis |

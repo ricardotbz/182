@@ -82,12 +82,13 @@ kombiniert HIDS, SIEM-Funktionen (Log-Sammlung und -Auswertung) und XDR (automat
 Logzeile  →  Pre-Decoding  →  Decoder  →  Regeln  →  Alert (Level 0–15)  →  ggf. Active Response
 ```
 
-1. **Log-Erfassung:** Der Agent liest z. B. diese Zeile aus `/var/log/auth.log`:
+1. **Log-Erfassung:** Der Agent liest z. B. folgende sshd-Meldung (auf Ubuntu 24.04 aus dem **journald**,
+   auf anderen Systemen aus `/var/log/auth.log`):
    ```text
-   Oct 19 14:12:01 ubuntu-target sshd[1234]: Failed password for testuser from 192.168.56.30 port 51234 ssh2
+   Oct 19 14:12:01 hardening-lab sshd[1234]: Failed password for testuser from 192.168.179.130 port 51234 ssh2
    ```
 2. **Pre-Decoding:** Wazuh erkennt Zeitstempel, Hostname und Programmname (`sshd`).
-3. **Decoder:** Ein Decoder extrahiert Felder, z. B. `srcip = 192.168.56.30`, `dstuser = testuser`.
+3. **Decoder:** Ein Decoder extrahiert Felder, z. B. `srcip = 192.168.179.130`, `dstuser = testuser`.
 4. **Regeln:** Wazuh prüft die Felder gegen Regeln. Regel **5760** passt: *"sshd: authentication failed"*.
    Kommen viele solche Ereignisse von derselben IP, greift eine **Frequenzregel** (z. B. **5763**, *Brute Force*).
 5. **Alert:** Jede Regel hat ein **Level von 0 bis 15**. Ab Level 3 (Standard) wird ein Alert gespeichert.

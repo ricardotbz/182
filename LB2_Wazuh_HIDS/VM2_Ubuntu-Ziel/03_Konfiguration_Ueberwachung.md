@@ -9,23 +9,32 @@ sudo nano /var/ossec/etc/ossec.conf
 
 ## 1. Log-Sammlung einrichten
 
-Zuerst prüfen, welche Logs bereits überwacht werden:
+Ubuntu 24.04 schreibt seine Logs über **systemd-journald**. Wazuh 4.14 liest journald in der
+Standardkonfiguration bereits aus und erfasst darüber **sowohl** die SSH-Anmeldungen (sshd) **als auch**
+die Kernelmeldungen (iptables `M182-SCAN:` für die Portscan-Erkennung). Prüfen, dass der journald-Block da ist:
 
 ```bash
-sudo grep -A3 '<localfile>' /var/ossec/etc/ossec.conf
+sudo grep -A2 '<localfile>' /var/ossec/etc/ossec.conf
 ```
 
-Fehlen `/var/log/auth.log` und `/var/log/syslog`, die `<localfile>`-Blöcke aus der Config-Datei einfügen.
+Erwartet:
 
-| Logdatei | Inhalt | Wichtig für |
+```xml
+<localfile>
+  <log_format>journald</log_format>
+  <location>journald</location>
+</localfile>
+```
+
+| Quelle | Inhalt | Wichtig für |
 |---|---|---|
-| `/var/log/auth.log` | SSH-Logins, `sudo`, `useradd` | SSH-Brute-Force, Benutzeränderungen |
-| `/var/log/syslog` | Systemmeldungen inkl. Kernel (iptables) | Portscan-Erkennung |
-| `/var/log/audit/audit.log` | auditd-Ereignisse | FIM whodata (wer hat geändert) |
+| journald (`sshd`) | SSH-Logins, `sudo`, `useradd` | SSH-Brute-Force, Benutzeränderungen |
+| journald (`kernel`) | Kernelmeldungen inkl. iptables `M182-SCAN:` | Portscan-Erkennung |
+| auditd | Wer hat eine Datei geändert | FIM whodata (über `<syscheck whodata>`) |
 
-> `kern.log` wird **nicht** zusätzlich eingebunden, da die Kernelmeldungen bereits in `syslog` stehen.
-> Sonst kommen alle Firewall-Ereignisse doppelt. Gleiches gilt für einen eventuell vorhandenen
-> `journald`-Eintrag: Werden sshd-Meldungen doppelt angezeigt, eine der beiden Quellen entfernen.
+> **Nicht** zusätzlich `/var/log/auth.log`, `/var/log/syslog` oder `/var/log/kern.log` als `<localfile>`
+> einbinden. Diese Dateien existieren auf Ubuntu zwar weiterhin (rsyslog), würden die Ereignisse aber ein
+> zweites Mal liefern → doppelte Alerts.
 
 ## 2. File Integrity Monitoring (FIM)
 
@@ -54,11 +63,11 @@ jede neue eingehende TCP-Verbindung ins Kernel-Log schreiben. Wazuh wertet diese
 (Regeln 100110 / 100111 auf dem Server).
 
 ```bash
-# Interface im Host-only-Netz ermitteln (z. B. enp0s8)
+# Interface im NAT-Netz ermitteln (hier ens33)
 ip -br a
 
 # Jede neue TCP-Verbindung (SYN) aus dem Testnetz loggen, max. 50 Zeilen/s pro Quelle
-sudo iptables -A INPUT -i enp0s8 -s 192.168.56.0/24 -p tcp --syn \
+sudo iptables -A INPUT -i ens33 -s 192.168.179.0/24 -p tcp --syn \
   -m conntrack --ctstate NEW \
   -m hashlimit --hashlimit-upto 50/sec --hashlimit-mode srcip --hashlimit-name m182scan \
   -j LOG --log-prefix "M182-SCAN: " --log-level 4
@@ -66,10 +75,11 @@ sudo iptables -A INPUT -i enp0s8 -s 192.168.56.0/24 -p tcp --syn \
 sudo iptables -L INPUT -n -v --line-numbers
 ```
 
-Testen (von einer anderen VM eine Verbindung aufbauen, z. B. `nc -zv 192.168.56.20 80`), danach:
+Testen (von einer anderen VM eine Verbindung aufbauen, z. B. `nc -zv 192.168.179.128 80`), danach im
+Journal (Kernelmeldungen) nachsehen:
 
 ```bash
-sudo grep "M182-SCAN" /var/log/syslog | tail -n 3
+sudo journalctl -k | grep "M182-SCAN" | tail -n 3
 ```
 
 Regeln dauerhaft speichern:
@@ -106,7 +116,7 @@ sudo tail -n 50 /var/ossec/logs/ossec.log | grep -Ei "error|warn|syscheck|logcol
 Erwartet u. a.:
 
 ```text
-wazuh-logcollector: INFO: (1950): Analyzing file: '/var/log/auth.log'.
+wazuh-logcollector: INFO: (9203): Monitoring journal entries.
 wazuh-syscheckd: INFO: (6012): Real-time file integrity monitoring started.
 ```
 
@@ -116,7 +126,7 @@ wazuh-syscheckd: INFO: (6012): Real-time file integrity monitoring started.
 echo "Konfiguration v2 - geändert" | sudo tee -a /opt/m182-wichtig/app.conf
 ```
 
-Im Dashboard → **File Integrity Monitoring → Events** → Agent `ubuntu-target`:
+Im Dashboard → **File Integrity Monitoring → Events** → Agent `ubuntu-endpunkt`:
 Alert **550** *"Integrity checksum changed"* mit Diff und Benutzer (`whodata`).
 
 ![Screenshot FIM-Alert](../screenshots/vm2_fim_alert.png)

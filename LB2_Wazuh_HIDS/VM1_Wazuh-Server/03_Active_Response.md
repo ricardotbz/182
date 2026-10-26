@@ -9,12 +9,12 @@ Damit wird Wazuh vom reinen **IDS** zu einem **IPS** (Intrusion Prevention).
 ## 1. Ablauf
 
 ```text
-Kali (192.168.56.30)            Ubuntu-Agent                    Wazuh-Manager
+Kali (192.168.179.130)            Ubuntu-Agent                    Wazuh-Manager
    │  hydra ssh-Angriff  ───────▶ sshd: Failed password
    │                             auth.log ───────────────────▶ Regel 100100 (Level 12)
    │                                                            │ active-response: firewall-drop
    │                             ◀──────────────────────────────┘
-   │                             iptables -I INPUT -s 192.168.56.30 -j DROP
+   │                             iptables -I INPUT -s 192.168.179.130 -j DROP
    │  ✗ keine Verbindung mehr
    │                             ... nach 600 s: Sperre entfernt
 ```
@@ -30,8 +30,8 @@ Den Block aus [config/ossec_manager_active-response.xml](config/ossec_manager_ac
 
 ```xml
 <!-- im bestehenden <global>-Abschnitt ergänzen -->
-<white_list>192.168.56.10</white_list>
-<white_list>192.168.56.1</white_list>
+<white_list>192.168.179.129</white_list>
+<white_list>192.168.179.1</white_list>
 
 <!-- neuer Abschnitt innerhalb von <ossec_config> -->
 <active-response>
@@ -52,7 +52,7 @@ Den Block aus [config/ossec_manager_active-response.xml](config/ossec_manager_ac
 | `white_list` | Diese IPs werden **nie** gesperrt (Schutz vor Selbstaussperrung) |
 
 > **Achtung:** Kali **nicht** in die `white_list` eintragen, sonst wird der Angreifer nie gesperrt.
-> Den Host-PC (`192.168.56.1`) und den Server dagegen schon.
+> Den Host-PC (`192.168.179.1`) und den Server dagegen schon.
 
 Prüfen, ob der Befehl `firewall-drop` definiert ist:
 
@@ -72,14 +72,14 @@ sudo systemctl restart wazuh-manager
 # Liste der Agents und deren IDs
 sudo /var/ossec/bin/agent_control -l
 
-# IP 192.168.56.30 auf Agent 001 (ubuntu-target) sperren
-sudo /var/ossec/bin/agent_control -b 192.168.56.30 -f firewall-drop0 -u 001
+# IP 192.168.179.130 auf Agent 001 (ubuntu-endpunkt) sperren
+sudo /var/ossec/bin/agent_control -b 192.168.179.130 -f firewall-drop0 -u 001
 ```
 
 Auf der Ubuntu-VM prüfen:
 
 ```bash
-sudo iptables -L INPUT -n --line-numbers | grep 192.168.56.30
+sudo iptables -L INPUT -n --line-numbers | grep 192.168.179.130
 sudo tail -n 20 /var/ossec/logs/active-responses.log
 ```
 
@@ -96,7 +96,7 @@ Erwartetes Ergebnis:
 2. Nach ca. 5 Fehlversuchen erscheint Alert **100100** im Dashboard.
 3. Direkt danach erscheint ein Alert mit Regel **651** – *"Host Blocked by firewall-drop Active Response"*.
 4. Hydra meldet Verbindungsfehler / Timeouts.
-5. `ping 192.168.56.20` von Kali schlägt fehl.
+5. `ping 192.168.179.128` von Kali schlägt fehl.
 6. Nach 600 Sekunden: Regel **652** – Sperre aufgehoben, Kali erreicht Ubuntu wieder.
 
 ## 5. Im Dashboard anzeigen
@@ -104,7 +104,7 @@ Erwartetes Ergebnis:
 **Threat Hunting → Events**, Filter:
 
 ```text
-rule.id:(100100 OR 5763 OR 651 OR 652) and agent.name:ubuntu-target
+rule.id:(100100 OR 5763 OR 651 OR 652) and agent.name:ubuntu-endpunkt
 ```
 
 ![Screenshot Active Response](../screenshots/vm1_active_response.png)

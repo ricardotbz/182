@@ -2,10 +2,11 @@
 
 | Eigenschaft | Wert |
 |---|---|
-| Hostname | `kali-attacker` |
-| IP | `192.168.56.30` |
-| OS | Kali Linux (aktuelle Version) |
-| Ressourcen | 2 vCPU, 2–4 GB RAM, 30 GB Disk |
+| Hostname | `kali` |
+| Agent-Name in Wazuh | `kali-attacker` |
+| IP | `192.168.179.130` |
+| OS | Kali Linux Rolling |
+| Ressourcen | 2 vCPU, 4 GB RAM, 80 GB Disk |
 | Werkzeuge | `nmap`, `hydra` (vorinstalliert in Kali), Wazuh-Agent |
 | Rolle | Führt die Angriffe gegen die Ubuntu-VM aus. Trägt selbst einen Agent (zweiter überwachter Host). |
 
