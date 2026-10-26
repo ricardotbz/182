@@ -13,7 +13,7 @@
   <!--    Eigene Regel = 5 Fehlversuche in 60 s, gleiche IP   -->
   <!-- ===================================================== -->
   <rule id="100100" level="12" frequency="5" timeframe="60">
-    <if_matched_group>authentication_failed</if_matched_group>
+    <if_matched_sid>5760</if_matched_sid>
     <same_source_ip />
     <description>M182: SSH-Brute-Force erkannt - 5 Fehlversuche in 60s von $(srcip)</description>
     <mitre>
