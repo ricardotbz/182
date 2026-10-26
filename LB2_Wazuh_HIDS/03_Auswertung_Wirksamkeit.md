@@ -35,13 +35,15 @@ Hier werden die Ergebnisse der Angriffe gesammelt und bewertet (Handlungsziel 5 
 
 ## 3.3 Schwachstellen- und Konfigurationsanalyse
 
-| Modul | Ergebnis (Beispiel) | Euer Ergebnis |
+| Modul | Ergebnis (Beispiel) | Unser Ergebnis |
 |---|---|---|
-| Vulnerability Detection (ubuntu-endpunkt) | Anzahl CVEs nach Schweregrad (Critical/High/Medium/Low) | [AUSFÜLLEN] |
-| SCA / CIS-Benchmark (ubuntu-endpunkt) | Score in %, Anzahl Failed Checks | [AUSFÜLLEN] |
-| Wichtigste fehlgeschlagene SCA-Checks | z. B. „SSH PermitRootLogin“, „Passwort-Policy“ | [AUSFÜLLEN] |
+| Vulnerability Detection (ubuntu-endpunkt) | Anzahl CVEs nach Schweregrad | Critical 153, High 1005, Medium 1176, Low 89 |
+| SCA / CIS-Benchmark (ubuntu-endpunkt) | Score in %, Anzahl Failed Checks | Score **38 %** – Passed 105, Failed 165, n/a 9 |
+| Wichtigste fehlgeschlagene SCA-Checks | z. B. „SSH PermitRootLogin“, „Passwort-Policy“ | CIS Ubuntu 24.04 LTS Benchmark v1.0.0 |
 
-Screenshots: `screenshots/vm1_vulnerability.png`, `screenshots/vm1_sca.png`
+![Vulnerability Detection](screenshots/vm1_vulnerability.png)
+
+![SCA / CIS-Benchmark](screenshots/vm1_sca.png)
 
 ## 3.4 False Positives / False Negatives
 
