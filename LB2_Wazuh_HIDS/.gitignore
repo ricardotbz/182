@@ -73,6 +73,9 @@ alerts.json
 *.7z
 *.rar
 
+# ---- Projektplanung: getrennt abgeben, NICHT mit der Klasse teilen ----
+_Projektplanung/
+
 # ---- Betriebssystem / Editor ----
 .DS_Store
 Thumbs.db

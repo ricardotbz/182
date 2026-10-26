@@ -1,7 +1,7 @@
 # 5. Quellen
 
-> Alle Links beim Verfassen der Doku zuletzt geprüft: [AUSFÜLLEN – Datum]. Die Wazuh-Doku immer in der
-> Version verwenden, die eurer installierten Version entspricht (`current` = neueste).
+> Alle Links zuletzt geprüft am **26.10.2026**. Die Wazuh-Doku immer in der
+> Version verwenden, die eurer installierten Version entspricht (hier: 4.14; `current` = neueste).
 
 ## Offizielle Wazuh-Dokumentation
 
