@@ -1,6 +1,6 @@
 # VM1 – Active Response: Angreifer-IP automatisch sperren
 
-Mit **Active Response** reagiert Wazuh automatisch auf Alerts. Wir verwenden das mitgelieferte Skript
+Mit **Active Response** ([Wazuh-Doku](https://documentation.wazuh.com/current/user-manual/capabilities/active-response/index.html)) reagiert Wazuh automatisch auf Alerts. Wir verwenden das mitgelieferte Skript
 **`firewall-drop`**. Es fügt auf dem betroffenen Agent eine iptables-Regel ein, die alle Pakete der Angreifer-IP
 verwirft. Nach Ablauf des Timeouts wird die Sperre automatisch wieder aufgehoben.
 

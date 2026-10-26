@@ -31,7 +31,9 @@ Netzwerk passiert*.
 ## 1.3 Was ist Wazuh?
 
 Wazuh ist eine kostenlose **Open-Source-Plattform für Security Monitoring**. Sie ist aus OSSEC entstanden und
-kombiniert HIDS, SIEM-Funktionen (Log-Sammlung und -Auswertung) und XDR (automatische Reaktion).
+kombiniert HIDS, SIEM-Funktionen (Log-Sammlung und -Auswertung) und XDR (automatische Reaktion) (vgl.
+[Wazuh-Doku: Architektur](https://documentation.wazuh.com/current/getting-started/architecture.html)). Die
+erkannten Angriffe ordnet Wazuh den Techniken von [MITRE ATT&CK](https://attack.mitre.org/) zu.
 
 ### Funktionen von Wazuh
 

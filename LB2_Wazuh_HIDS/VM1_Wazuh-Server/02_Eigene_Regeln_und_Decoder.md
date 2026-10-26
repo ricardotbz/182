@@ -1,6 +1,8 @@
 # VM1 – Eigene Regeln und Decoder
 
-Wazuh bringt über 3000 Regeln mit. Für unser Projekt schreiben wir **eigene Regeln**, um:
+Wazuh bringt über 3000 Regeln mit. Wie eigene Regeln aufgebaut werden, beschreibt die
+[Wazuh-Doku zu Custom Rules](https://documentation.wazuh.com/current/user-manual/ruleset/custom.html). Für unser
+Projekt schreiben wir **eigene Regeln**, um:
 
 1. SSH-Brute-Force **schneller und strenger** zu erkennen als die Standardregel,
 2. einen **erfolgreichen Login nach einem Brute-Force** als kritisch zu melden,

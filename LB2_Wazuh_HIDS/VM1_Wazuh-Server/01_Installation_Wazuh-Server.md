@@ -137,7 +137,8 @@ Im Dashboard: **Agents management → Summary** → beide Agents müssen **activ
 
 ## 7. Vulnerability Detection und SCA prüfen
 
-Beide Module sind in der OVA standardmässig aktiv. Prüfen in `/var/ossec/etc/ossec.conf`:
+Beide Module ([Vulnerability Detection](https://documentation.wazuh.com/current/user-manual/capabilities/vulnerability-detection/index.html),
+[SCA](https://documentation.wazuh.com/current/user-manual/capabilities/sec-config-assessment/index.html)) sind in der OVA standardmässig aktiv. Prüfen in `/var/ossec/etc/ossec.conf`:
 
 ```xml
 <vulnerability-detection>

@@ -38,7 +38,8 @@ Erwartet:
 
 ## 2. File Integrity Monitoring (FIM)
 
-Den bestehenden `<syscheck>`-Abschnitt gemäss Config-Datei anpassen. Wichtigste Punkte:
+Den bestehenden `<syscheck>`-Abschnitt gemäss Config-Datei anpassen (Grundlagen in der
+[Wazuh-Doku: File Integrity Monitoring](https://documentation.wazuh.com/current/user-manual/capabilities/file-integrity/index.html)). Wichtigste Punkte:
 
 | Option | Bedeutung |
 |---|---|

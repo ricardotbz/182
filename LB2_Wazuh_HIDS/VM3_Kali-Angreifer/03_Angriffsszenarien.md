@@ -12,6 +12,8 @@ Zeitbereich „Last 15 minutes“, Auto-Refresh an.
 
 **Ziel:** Passwort des Benutzers `testuser` per Wörterbuchangriff erraten.
 **Erwartete Erkennung:** Regeln 5760 → 5763 / 100100, danach Active Response (IP-Sperre).
+**Werkzeug / Technik:** [Hydra (THC)](https://github.com/vanhauser-thc/thc-hydra), zugeordnet zu
+[MITRE ATT&CK T1110 – Brute Force](https://attack.mitre.org/techniques/T1110/).
 
 ```bash
 hydra -L ~/m182-users.txt -P ~/m182-passwords.txt -t 4 -f ssh://192.168.179.128
@@ -65,6 +67,8 @@ ssh testuser@192.168.179.128   # -> Timeout / no route
 
 **Ziel:** Offene Dienste auf der Ubuntu-VM finden.
 **Erwartete Erkennung:** Regeln 100110 (einzelne Verbindung) → 100111 (Portscan, Level 10).
+**Werkzeug / Technik:** [Nmap](https://nmap.org/book/man.html), zugeordnet zu
+[MITRE ATT&CK T1046 – Network Service Discovery](https://attack.mitre.org/techniques/T1046/).
 
 > Falls die IP aus Szenario 1 noch gesperrt ist: 600 s warten oder auf VM2 die Sperre entfernen:
 > `sudo iptables -D INPUT -s 192.168.179.130 -j DROP`
