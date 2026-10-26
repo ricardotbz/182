@@ -4,7 +4,7 @@
 
 | Handlungsziel | Umsetzung im Projekt | Nachweis / Kapitel |
 |---|---|---|
-| **1. Systeme auf Sicherheitslücken untersuchen** | Vulnerability Detection (CVE-Abgleich) und SCA (CIS-Benchmark) auf `ubuntu-target` | [03_Auswertung](03_Auswertung_Wirksamkeit.md#33-schwachstellen--und-konfigurationsanalyse) |
+| **1. Systeme auf Sicherheitslücken untersuchen** | Vulnerability Detection (CVE-Abgleich) und SCA (CIS-Benchmark) auf `ubuntu-endpunkt` | [03_Auswertung](03_Auswertung_Wirksamkeit.md#33-schwachstellen--und-konfigurationsanalyse) |
 | **2. Sicherheitsvorkehrungen entwickeln** | Aus Scan-Ergebnissen abgeleitete Massnahmen (SSH-Key-Login, Härtung) | Abschnitt 4.2 |
 | **3. Massnahmen implementieren und dokumentieren** | Umsetzung auf den Agents (FIM, Firewall-Logging, Active Response), vollständige MD-Doku | [VM2](VM2_Ubuntu-Ziel/03_Konfiguration_Ueberwachung.md), [VM1 AR](VM1_Wazuh-Server/03_Active_Response.md) |
 | **4. HIDS installieren und konfigurieren** | Wazuh-Server + 2 Agents installiert und konfiguriert | [VM1 Installation](VM1_Wazuh-Server/01_Installation_Wazuh-Server.md) |
@@ -13,7 +13,7 @@
 
 ## 4.2 Abgeleitete Sicherheitsmassnahmen (Ziel 2)
 
-Aus den Scan- und Angriffsergebnissen ergeben sich folgende Massnahmen für `ubuntu-target`:
+Aus den Scan- und Angriffsergebnissen ergeben sich folgende Massnahmen für `ubuntu-endpunkt`:
 
 | Problem | Massnahme | Umgesetzt in |
 |---|---|---|

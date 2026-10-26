@@ -1,0 +1,15 @@
+# Live-Nachweis der Angriffserkennung  (2026-10-26 12:39)
+
+Angriffe: Kali (192.168.179.130) -> Ubuntu / Agent ubuntu-endpunkt (192.168.179.128).
+Quelle: /var/ossec/logs/alerts/alerts.json auf dem Wazuh-Server (wazuh-server).
+
+Regel    Anzahl  Bedeutung
+5760     11      SSH-Login fehlgeschlagen (Standard)
+100100   1       EIGEN: SSH-Brute-Force (5 Fehlversuche in 60s)
+651      6       Active Response: Angreifer-IP gesperrt
+100110   64      EIGEN: neue eingehende Verbindung (Portscan-Basis)
+100111   5       EIGEN: Portscan erkannt (>15 Ports in 20s)
+100120   6       EIGEN: kritische Systemdatei geaendert
+100121   1       EIGEN: neue Datei in /etc/sudoers.d
+100122   2       EIGEN: authorized_keys geaendert/neu
+5902     2       neuer Benutzer angelegt

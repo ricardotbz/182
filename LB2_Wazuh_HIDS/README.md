@@ -65,7 +65,7 @@ LB2_Wazuh_HIDS/
 
 1. Theorie lesen (Kapitel 1)
 2. Netzwerk und VMs anlegen (Kapitel 2)
-3. Wazuh-Server installieren (VM1, Datei 01)
+3. Wazuh-Server-OVA importieren und starten (VM1, Datei 01)
 4. Ubuntu vorbereiten und Agent anbinden (VM2, Dateien 01–03)
 5. Kali vorbereiten und Agent anbinden (VM3, Dateien 01–02)
 6. Eigene Regeln und Active Response auf dem Server einrichten (VM1, Dateien 02–03)
